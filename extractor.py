@@ -66,6 +66,7 @@ async def extract_stream_urls(page, movie_url, verbose=False):
         print(f"\n[*] Processing movie: {movie_url}")
         
     extracted_urls = {}
+    cover_image_url = ""
     
     try:
         # Load movie page with retries
@@ -80,6 +81,14 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                 await page.wait_for_timeout(3000)
 
         await page.wait_for_timeout(2000)
+
+        # Extract cover image URL via og:image metadata
+        og_image = page.locator('meta[property="og:image"]')
+        if await og_image.count() > 0:
+            cover_image_url = await og_image.first.get_attribute("content") or ""
+            if verbose and cover_image_url:
+                print(f"    [+] Found Cover Image: {cover_image_url}")
+
         
         # 1. Click splash-play button first to initialize player
         splash_play = page.locator("#splash-play")
@@ -168,14 +177,14 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                         print(f"      [-] Error clicking option '{opt_text_clean}': {click_err}")
                         
         if extracted_urls:
-            return extracted_urls
+            return extracted_urls, cover_image_url
         else:
-            return {"Status": "NO_STREAMS_FOUND"}
+            return {"Status": "NO_STREAMS_FOUND"}, cover_image_url
             
     except Exception as e:
         if verbose:
             print(f"    [-] Error processing page: {e}")
-        return {"Status": f"ERROR: {str(e)}"}
+        return {"Status": f"ERROR: {str(e)}"}, ""
 
 async def main():
     parser = argparse.ArgumentParser(description="Endless movie crawler bot for cinesubz.lk")
@@ -197,7 +206,7 @@ async def main():
         
         csv_file_path = args.output
         file_exists = os.path.exists(csv_file_path)
-        headers = ["Title", "Movie Page URL", "Extracted Stream URLs"]
+        headers = ["Title", "Movie Page URL", "Cover Image URL", "Extracted Stream URLs"]
         
         # Load already processed URLs to avoid scraping duplicates if rerun
         processed_urls = set()
@@ -256,13 +265,13 @@ async def main():
                         continue
                         
                     print(f"[Page {page_num} - {idx}/{len(movie_list)}] Scraped: '{title}'")
-                    urls_dict = await extract_stream_urls(page, movie_url, args.verbose)
+                    urls_dict, cover_image_url = await extract_stream_urls(page, movie_url, args.verbose)
                     
                     # Format output string
                     urls_str = "; ".join([f"{k}: {v}" for k, v in urls_dict.items()])
                     
                     # Save immediately to prevent data loss
-                    writer.writerow([title, movie_url, urls_str])
+                    writer.writerow([title, movie_url, cover_image_url, urls_str])
                     csv_file.flush()
                     processed_urls.add(movie_url)
                 
