@@ -3,6 +3,7 @@ import '../core/theme.dart';
 import '../models/movie.dart';
 import '../services/movie_service.dart';
 import '../widgets/movie_grid.dart';
+import 'movie_player_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -68,14 +69,9 @@ class HomeScreen extends StatelessWidget {
                 child: MovieGrid(
                   movies: movies,
                   onMovieTap: (movie) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Playing: ${movie.title}'),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor: RooflixTheme.primary,
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MoviePlayerScreen(movie: movie),
                       ),
                     );
                   },

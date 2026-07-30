@@ -38,10 +38,11 @@ dependencies:
   firebase_database: ^11.3.5
   firebase_auth: ^5.5.1
 
-  # UI
+  # UI & Media
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
   google_fonts: ^6.2.1
+  video_player: ^2.9.2
 
 dev_dependencies:
   flutter_test:
