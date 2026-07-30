@@ -210,7 +210,11 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                     opt_text = await opt.inner_text()
                     opt_text_clean = opt_text.replace("\n", " ").strip()
 
-                    if "trailer" in opt_text_clean.lower() or "youtube" in opt_text_clean.lower():
+                    # Skip trailers, YouTube, and Evo Player (not cs06 domain)
+                    opt_lower = opt_text_clean.lower()
+                    if "trailer" in opt_lower or "youtube" in opt_lower or "evo" in opt_lower:
+                        if verbose:
+                            print(f"    [~] Skipping non-CS player: '{opt_text_clean}'")
                         continue
 
                     if verbose:
