@@ -267,8 +267,18 @@ async def main():
                     print(f"[Page {page_num} - {idx}/{len(movie_list)}] Scraped: '{title}'")
                     urls_dict, cover_image_url = await extract_stream_urls(page, movie_url, args.verbose)
                     
-                    # Format output string
-                    urls_str = "; ".join([f"{k}: {v}" for k, v in urls_dict.items()])
+                    # Filter: only keep URLs from cs06.avatarzone.online
+                    CS06_DOMAIN = "https://cs06.avatarzone.online"
+                    filtered_urls = {k: v for k, v in urls_dict.items() if v.startswith(CS06_DOMAIN)}
+                    
+                    # Skip this movie if no cs06 URLs were found
+                    if not filtered_urls:
+                        print(f"    [-] No cs06 stream found for '{title}'. Skipping.")
+                        processed_urls.add(movie_url)
+                        continue
+                    
+                    # Format output string (only cs06 URLs)
+                    urls_str = "; ".join([f"{k}: {v}" for k, v in filtered_urls.items()])
                     
                     # Save immediately to prevent data loss
                     writer.writerow([title, movie_url, cover_image_url, urls_str])
