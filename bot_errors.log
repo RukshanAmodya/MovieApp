@@ -1,0 +1,60 @@
+2026-07-30 19:41:16,562 [INFO] [*] Connecting to Firebase Realtime Database...
+2026-07-30 19:41:16,702 [INFO] [+] Firebase connected: https://rooflix-app-default-rtdb.firebaseio.com/movies
+2026-07-30 19:41:16,702 [INFO] [*] Loading processed URLs from Firebase...
+2026-07-30 19:41:19,209 [INFO] [+] Found 3 already-processed movie(s). These will be skipped.
+2026-07-30 19:41:24,466 [INFO] [+] Browser launched.
+2026-07-30 19:41:24,466 [INFO] 
+==========================================
+2026-07-30 19:41:24,466 [INFO] [*] Listing Page 1: https://cinesubz.lk/movies/
+2026-07-30 19:41:24,466 [INFO] ==========================================
+2026-07-30 19:41:24,467 [INFO] [*] Fetching catalog: https://cinesubz.lk/movies/
+2026-07-30 19:41:48,215 [INFO] [+] Found 30 movie link(s) on page.
+2026-07-30 19:41:48,215 [INFO] [*] Page 1: 30 movies found.
+2026-07-30 19:41:48,215 [INFO] [Page 1 - 1/30] Already in Firebase, skipping: 'Demon Slayer: Kimetsu No Yaiba Infinity Castle (2025) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:41:48,216 [INFO] [Page 1 - 2/30] Already in Firebase, skipping: 'The Death of Robin Hood (2026) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:41:48,216 [INFO] [Page 1 - 3/30] Already in Firebase, skipping: 'Chinna Chinna Aasai (2026) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:41:48,216 [INFO] [Page 1 - 4/30] Scraping: 'Ankhon Dekhi (2013) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:41:48,216 [INFO] 
+[*] Processing: https://cinesubz.lk/movies/ankhon-dekhi-2013-sinhala-subtitles/
+2026-07-30 19:41:51,788 [INFO]     [+] Cover Image: https://image.tmdb.org/t/p/w780/3HIOpxqnrJ9TwyhMCacI2GZlhUP.jpg
+
+2026-07-30 19:41:51,824 [INFO]     [*] Clicking #splash-play...
+2026-07-30 19:41:55,777 [INFO]     [*] 3 player option(s) found.
+2026-07-30 19:41:55,810 [INFO]     [*] Clicking: 'Server CS Player'
+2026-07-30 19:42:01,315 [INFO]       [+] Server CS Player: https://cs07.avatarzone.online/Ankhon%20Dekhi%20(2013)%20Hindi%20WEB-[CineSubz.co]-720p.mp4?play=true
+2026-07-30 19:42:01,346 [INFO]     [*] Clicking: 'Server Evo Player'
+2026-07-30 19:42:11,282 [INFO]       [+] Server Evo Player: https://evostream.top/video/3284d704ca038978c6c5c2b145d0a15c
+2026-07-30 19:42:11,297 [INFO]     [-] No cs06 stream. Skipping: 'Ankhon Dekhi (2013) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:43:59,144 [INFO] [*] Connecting to Firebase Realtime Database...
+2026-07-30 19:43:59,193 [INFO] [+] Firebase connected: https://rooflix-app-default-rtdb.firebaseio.com/movies
+2026-07-30 19:43:59,193 [INFO] [*] Loading processed URLs from Firebase...
+2026-07-30 19:44:01,495 [INFO] [*] No processed URLs found. Starting fresh.
+2026-07-30 19:44:03,054 [INFO] [+] Browser launched.
+2026-07-30 19:44:03,055 [INFO] 
+==========================================
+2026-07-30 19:44:03,055 [INFO] [*] Listing Page 1: https://cinesubz.lk/movies/
+2026-07-30 19:44:03,055 [INFO] ==========================================
+2026-07-30 19:44:03,055 [INFO] [*] Fetching catalog: https://cinesubz.lk/movies/
+2026-07-30 19:44:13,483 [INFO] [+] Found 30 movie link(s) on page.
+2026-07-30 19:44:13,483 [INFO] [*] Page 1: 30 movies found.
+2026-07-30 19:44:13,484 [INFO] [Page 1 - 1/30] Scraping: 'Demon Slayer: Kimetsu No Yaiba Infinity Castle (2025) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:44:13,486 [INFO] 
+[*] Processing: https://cinesubz.lk/movies/demon-slayer-kimetsu-no-yaiba-infinity-castle-2025-sinhala-subtitles/
+2026-07-30 19:44:16,964 [INFO]     [+] Cover Image: https://image.tmdb.org/t/p/w780/1RgPyOhN4DRs225BGTlHJqCudII.jpg
+
+2026-07-30 19:44:17,028 [INFO]     [*] Clicking #splash-play...
+2026-07-30 19:44:20,840 [INFO]     [*] 3 player option(s) found.
+2026-07-30 19:44:20,850 [INFO]     [*] Clicking: 'Server CS Player'
+2026-07-30 19:44:25,496 [INFO]     [*] Clicking: 'Server Evo Player'
+2026-07-30 19:44:30,103 [INFO]     [-] No cs06 stream. Skipping: 'Demon Slayer: Kimetsu No Yaiba Infinity Castle (2025) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:44:30,447 [INFO] [Page 1 - 2/30] Scraping: 'The Death of Robin Hood (2026) Sinhala Subtitles | සිංහල උපසිරැසි සමඟ'
+2026-07-30 19:44:30,449 [INFO] 
+[*] Processing: https://cinesubz.lk/movies/the-death-of-robin-hood-2026-sinhala-subtitles/
+2026-07-30 19:44:33,854 [INFO]     [+] Cover Image: https://image.tmdb.org/t/p/w780/yw8FhuMvhJSy4zotEuCyk5bZ230.jpg
+
+2026-07-30 19:44:33,873 [INFO]     [*] Clicking #splash-play...
+2026-07-30 19:44:36,973 [INFO]     [*] 3 player option(s) found.
+2026-07-30 19:44:36,986 [INFO]     [*] Clicking: 'Server CS Player'
+2026-07-30 19:44:41,899 [ERROR] Future exception was never retrieved
+future: <Future finished exception=TargetClosedError('Target page, context or browser has been closed')>
+playwright._impl._errors.TargetClosedError: Target page, context or browser has been closed

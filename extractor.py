@@ -3,20 +3,14 @@ import sys
 import os
 import re
 import uuid
-import time
-import logging
 import argparse
-import traceback
-from playwright.async_api import async_playwright, Error as PlaywrightError
+from playwright.async_api import async_playwright
 
 # Firebase Admin SDK
 import firebase_admin
 from firebase_admin import credentials, db
 
-# ──────────────────────────────────────────────
-# Stdout / Logging Setup
-# ──────────────────────────────────────────────
-
+# Reconfigure stdout to support unicode printing on Windows console
 if sys.platform.startswith("win"):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -24,257 +18,169 @@ if sys.platform.startswith("win"):
     except AttributeError:
         pass
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("bot_errors.log", encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
-    ],
-)
-log = logging.getLogger("crawler")
-
 # ──────────────────────────────────────────────
-# Config
+# Firebase Helpers
 # ──────────────────────────────────────────────
 
-SERVICE_ACCOUNT_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "rooflix-app-firebase-adminsdk-fbsvc-a93c6036a4.json"
-)
-FIREBASE_DB_URL  = "https://rooflix-app-default-rtdb.firebaseio.com"
-CS06_DOMAIN      = "https://cs06.avatarzone.online"
-BASE_CATALOG_URL = "https://cinesubz.lk/movies/"
-
-MAX_RETRIES          = 4      # retries per network/firebase op
-BACKOFF_BASE         = 2      # seconds (doubles each retry)
-MAX_CONSECUTIVE_ERRS = 5      # consecutive movie errors before long pause
-CONSECUTIVE_ERR_WAIT = 60     # seconds to wait after too many errors
-PAGE_LOAD_WAIT       = 2500   # ms after page load
-PLAYER_CLICK_WAIT    = 4500   # ms after clicking a server option
-
-# ──────────────────────────────────────────────
-# Retry Helper
-# ──────────────────────────────────────────────
-
-async def with_retry(coro_fn, label="operation", retries=MAX_RETRIES, base=BACKOFF_BASE):
-    """
-    Retry an async coroutine with exponential backoff.
-    coro_fn must be a zero-argument callable that returns a coroutine.
-    """
-    last_err = None
-    for attempt in range(1, retries + 1):
-        try:
-            return await coro_fn()
-        except Exception as e:
-            last_err = e
-            wait = base ** attempt
-            log.warning(f"  [Retry {attempt}/{retries}] {label} failed: {e}. Waiting {wait}s...")
-            await asyncio.sleep(wait)
-    raise last_err
-
-def firebase_retry(fn, label="Firebase op", retries=MAX_RETRIES, base=BACKOFF_BASE):
-    """
-    Retry a synchronous Firebase call with exponential backoff.
-    """
-    last_err = None
-    for attempt in range(1, retries + 1):
-        try:
-            return fn()
-        except Exception as e:
-            last_err = e
-            wait = base ** attempt
-            log.warning(f"  [FB Retry {attempt}/{retries}] {label} failed: {e}. Waiting {wait}s...")
-            time.sleep(wait)
-    raise last_err
-
-# ──────────────────────────────────────────────
-# Firebase
-# ──────────────────────────────────────────────
+SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "rooflix-app-firebase-adminsdk-fbsvc-a93c6036a4.json")
+FIREBASE_DB_URL = "https://rooflix-app-default-rtdb.firebaseio.com"
+CS06_DOMAIN = "https://cs06.avatarzone.online"
 
 def init_firebase():
-    """Initialize Firebase and return (movies_ref, processed_ref)."""
+    """Initialize Firebase app once. Returns (movies_ref, processed_ref)."""
     if not firebase_admin._apps:
         cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
         firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
     return db.reference("movies"), db.reference("_processed")
 
+
 def load_processed_urls(processed_ref) -> set:
-    """Load already-scraped URL keys from _processed node for deduplication."""
-    log.info("[*] Loading processed URLs from Firebase...")
+    """
+    Read already-scraped movie URLs from the _processed Firebase node.
+    This is separate from movies data so movies stays clean.
+    """
+    print("[*] Loading processed URLs from Firebase for deduplication...")
     try:
-        snapshot = firebase_retry(lambda: processed_ref.get(), "load _processed")
+        snapshot = processed_ref.get()
         if not snapshot:
-            log.info("[*] No processed URLs found. Starting fresh.")
+            print("[*] No processed URLs found. Starting fresh.")
             return set()
+        # Keys are base64-encoded movie URLs stored as True
         urls = set(snapshot.keys())
-        log.info(f"[+] Found {len(urls)} already-processed movie(s). These will be skipped.")
+        print(f"[+] Found {len(urls)} already-processed movie(s).")
         return urls
     except Exception as e:
-        log.error(f"[!] Could not load _processed from Firebase: {e}. Continuing without dedup cache.")
+        print(f"[!] Warning: could not read Firebase _processed: {e}")
         return set()
 
 def save_to_firebase(movies_ref, processed_ref, movie_url: str,
-                     title: str, cover_url: str, stream_url: str) -> str:
-    """Save a movie to Firebase with a UUID key and mark it as processed."""
+                     title: str, cover_url: str, stream_url: str):
+    """Write movie to Firebase with UUID key. Track URL in _processed for dedup."""
     key = str(uuid.uuid4())
+    # Save clean movie data
+    movies_ref.child(key).set({
+        "title": title,
+        "cover_url": cover_url,
+        "stream_url": stream_url,
+    })
+    # Mark as processed using a sanitized URL key
     processed_key = re.sub(r"[.#$\[\]/]", "_", movie_url)[-150:]
-
-    def _write():
-        movies_ref.child(key).set({
-            "title":      title,
-            "cover_url":  cover_url,
-            "stream_url": stream_url,
-        })
-        processed_ref.child(processed_key).set(True)
-
-    firebase_retry(_write, f"save '{title}'")
-    return key, processed_key
-
-def mark_processed(processed_ref, movie_url: str) -> str:
-    """Mark a movie URL as processed (e.g. when skipped due to no cs06 stream)."""
-    processed_key = re.sub(r"[.#$\[\]/]", "_", movie_url)[-150:]
-    try:
-        firebase_retry(lambda: processed_ref.child(processed_key).set(True), "mark processed")
-    except Exception as e:
-        log.warning(f"  [!] Could not mark URL as processed in Firebase: {e}")
-    return processed_key
+    processed_ref.child(processed_key).set(True)
+    return key
 
 # ──────────────────────────────────────────────
-# Browser Factory
-# ──────────────────────────────────────────────
-
-async def create_browser_context(playwright):
-    """Launch a fresh Chromium browser + context."""
-    browser = await playwright.chromium.launch(headless=True)
-    context = await browser.new_context(
-        user_agent=(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
-    )
-    page = await context.new_page()
-    page.on("popup", lambda p: asyncio.create_task(p.close()))
-    return browser, page
-
-# ──────────────────────────────────────────────
-# Scrapers
+# Scraper Functions
 # ──────────────────────────────────────────────
 
 async def get_movie_list(page, base_url, verbose=False):
-    """Fetch movie links from a catalog page. Returns list of (url, title)."""
     if verbose:
-        log.info(f"[*] Fetching catalog: {base_url}")
-
-    async def _navigate():
-        response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
-        if response and response.status == 404:
-            return None  # signal 404
-        return response
+        print(f"[*] Fetching movie catalog from: {base_url}")
 
     try:
-        resp = await with_retry(_navigate, f"catalog page {base_url}")
-        if resp is None:
-            log.info(f"[-] 404 on catalog page: {base_url}")
-            return []
+        for attempt in range(3):
+            try:
+                response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
+                if response and response.status == 404:
+                    if verbose:
+                        print(f"[-] Catalog page returned 404: {base_url}")
+                    return []
+                break
+            except Exception as goto_err:
+                if attempt == 2:
+                    raise goto_err
+                print(f"[!] Warning: catalog navigation attempt {attempt+1} failed. Retrying...")
+                await page.wait_for_timeout(3000)
 
-        await page.wait_for_timeout(PAGE_LOAD_WAIT)
+        await page.wait_for_timeout(2500)
 
         anchors = await page.locator("a").all()
         movie_links = []
-        seen = set()
 
         for anchor in anchors:
             try:
-                href  = await anchor.get_attribute("href")
-                title = (await anchor.get_attribute("title") or await anchor.inner_text()).strip()
-                if not href:
-                    continue
-                clean = href.split('?')[0].split('#')[0]
-                if (
-                    "/movies/" in clean
-                    and clean.rstrip('/') != "https://cinesubz.lk/movies"
-                    and "/page/" not in clean
-                    and clean not in seen
-                ):
-                    movie_links.append((clean, title or "Unknown Movie"))
-                    seen.add(clean)
+                href = await anchor.get_attribute("href")
+                title = await anchor.get_attribute("title") or await anchor.inner_text()
+                title = title.strip()
+
+                if href:
+                    clean_href = href.split('?')[0].split('#')[0]
+                    if ("/movies/" in clean_href
+                            and clean_href.rstrip('/') != "https://cinesubz.lk/movies"
+                            and "/page/" not in clean_href):
+                        if clean_href not in [link[0] for link in movie_links]:
+                            movie_links.append((clean_href, title or "Unknown Movie"))
             except Exception:
                 continue
 
         if verbose:
-            log.info(f"[+] Found {len(movie_links)} movie link(s) on page.")
+            print(f"[+] Found {len(movie_links)} movie link(s) on page.")
         return movie_links
 
     except Exception as e:
-        log.error(f"[!] Error loading catalog page {base_url}: {e}")
+        if verbose:
+            print(f"[-] Error loading catalog page: {e}")
         return []
 
 
 async def extract_stream_urls(page, movie_url, verbose=False):
-    """
-    Navigate to a movie page and extract:
-      - cover image URL (og:image)
-      - stream URLs per player server
-    Returns (dict_of_streams, cover_image_url).
-    """
     if verbose:
-        log.info(f"\n[*] Processing: {movie_url}")
+        print(f"\n[*] Processing movie: {movie_url}")
 
     extracted_urls = {}
     cover_image_url = ""
 
-    async def _navigate():
-        await page.goto(movie_url, wait_until="domcontentloaded", timeout=60000)
-
     try:
-        await with_retry(_navigate, f"navigate to {movie_url}")
-        await page.wait_for_timeout(PAGE_LOAD_WAIT)
-
-        # Cover image
-        try:
-            og = page.locator('meta[property="og:image"]')
-            if await og.count() > 0:
-                cover_image_url = await og.first.get_attribute("content") or ""
-                if verbose and cover_image_url:
-                    log.info(f"    [+] Cover Image: {cover_image_url}")
-        except Exception as e:
-            log.warning(f"    [!] Could not extract cover image: {e}")
-
-        # Click splash-play
-        try:
-            splash = page.locator("#splash-play")
-            if await splash.count() > 0 and await splash.is_visible():
-                if verbose:
-                    log.info("    [*] Clicking #splash-play...")
-                await splash.click(timeout=5000)
+        for attempt in range(3):
+            try:
+                await page.goto(movie_url, wait_until="domcontentloaded", timeout=60000)
+                break
+            except Exception as e:
+                if attempt == 2:
+                    raise e
+                print(f"    [!] Navigation failed. Retry {attempt+1}...")
                 await page.wait_for_timeout(3000)
-        except Exception as e:
-            if verbose:
-                log.warning(f"    [!] splash-play click failed: {e}")
 
-        # Server options
+        await page.wait_for_timeout(2000)
+
+        # Extract cover image URL via og:image metadata
+        og_image = page.locator('meta[property="og:image"]')
+        if await og_image.count() > 0:
+            cover_image_url = await og_image.first.get_attribute("content") or ""
+            if verbose and cover_image_url:
+                print(f"    [+] Found Cover Image: {cover_image_url}")
+
+        # 1. Click splash-play button first to initialize player
+        splash_play = page.locator("#splash-play")
+        if await splash_play.count() > 0 and await splash_play.is_visible():
+            if verbose:
+                print("    [*] Clicking #splash-play to initialize player...")
+            try:
+                await splash_play.click(timeout=5000)
+                await page.wait_for_timeout(3000)
+            except Exception as click_err:
+                if verbose:
+                    print(f"    [!] Error clicking splash-play: {click_err}")
+
+        # 2. Look for option tabs (Zetaflix/Dooplay servers)
         server_options = await page.locator("#playeroptions li").all()
 
         if not server_options:
-            # Fallback: look for a bare iframe
             iframes = await page.locator("iframe").all()
             for iframe in iframes:
                 try:
-                    src      = await iframe.get_attribute("src")
-                    ifrm_id  = await iframe.get_attribute("id")
-                    if src and "youtube.com" not in src and src not in ("null", "", None) and ifrm_id != "trailer-view":
+                    src = await iframe.get_attribute("src")
+                    iframe_id = await iframe.get_attribute("id")
+                    if src and "youtube.com" not in src and src not in ("null", "", None) and iframe_id != "trailer-view":
                         video_url = src
                         try:
-                            el_handle    = await iframe.element_handle()
+                            el_handle = await iframe.element_handle()
                             content_frame = await el_handle.content_frame() if el_handle else None
                             if content_frame:
-                                vel = content_frame.locator("video.art-video, video")
-                                await vel.first.wait_for(state="attached", timeout=6000)
-                                direct = await vel.first.get_attribute("src")
-                                if direct:
-                                    video_url = direct
+                                video_el = content_frame.locator("video.art-video, video")
+                                await video_el.first.wait_for(state="attached", timeout=6000)
+                                direct_src = await video_el.first.get_attribute("src")
+                                if direct_src:
+                                    video_url = direct_src
                         except Exception:
                             pass
                         extracted_urls["Stream Player"] = video_url
@@ -283,198 +189,159 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                     continue
         else:
             if verbose:
-                log.info(f"    [*] {len(server_options)} player option(s) found.")
+                print(f"    [*] Found {len(server_options)} player options. Extracting streams...")
 
             for opt in server_options:
                 opt_text_clean = ""
                 try:
-                    opt_text_clean = (await opt.inner_text()).replace("\n", " ").strip()
+                    opt_text = await opt.inner_text()
+                    opt_text_clean = opt_text.replace("\n", " ").strip()
+
                     if "trailer" in opt_text_clean.lower() or "youtube" in opt_text_clean.lower():
                         continue
+
                     if verbose:
-                        log.info(f"    [*] Clicking: '{opt_text_clean}'")
+                        print(f"    [*] Clicking player option: '{opt_text_clean}'")
 
                     await opt.click(timeout=5000)
-                    await page.wait_for_timeout(PLAYER_CLICK_WAIT)
+                    await page.wait_for_timeout(4500)
 
                     iframes = await page.locator("iframe").all()
                     for iframe in iframes:
-                        try:
-                            src     = await iframe.get_attribute("src")
-                            ifrm_id = await iframe.get_attribute("id")
-                            if src and "youtube.com" not in src and src not in ("null", "", None) and ifrm_id != "trailer-view":
-                                video_url = src
-                                try:
-                                    el_handle    = await iframe.element_handle()
-                                    content_frame = await el_handle.content_frame() if el_handle else None
-                                    if content_frame:
-                                        vel = content_frame.locator("video.art-video, video")
-                                        await vel.first.wait_for(state="attached", timeout=5000)
-                                        direct = await vel.first.get_attribute("src")
-                                        if direct:
-                                            video_url = direct
-                                except Exception:
-                                    pass
-                                extracted_urls[opt_text_clean] = video_url
-                                if verbose:
-                                    log.info(f"      [+] {opt_text_clean}: {video_url}")
-                                break
-                        except Exception:
-                            continue
-                except PlaywrightError as pe:
-                    log.warning(f"      [-] Playwright error on '{opt_text_clean}': {pe}")
-                except Exception as e:
-                    log.warning(f"      [-] Error on '{opt_text_clean}': {e}")
+                        src = await iframe.get_attribute("src")
+                        iframe_id = await iframe.get_attribute("id")
+
+                        if src and "youtube.com" not in src and src not in ("null", "", None) and iframe_id != "trailer-view":
+                            video_url = src
+                            try:
+                                el_handle = await iframe.element_handle()
+                                content_frame = await el_handle.content_frame() if el_handle else None
+                                if content_frame:
+                                    video_el = content_frame.locator("video.art-video, video")
+                                    await video_el.first.wait_for(state="attached", timeout=5000)
+                                    direct_src = await video_el.first.get_attribute("src")
+                                    if direct_src:
+                                        video_url = direct_src
+                            except Exception:
+                                pass
+
+                            extracted_urls[opt_text_clean] = video_url
+                            if verbose:
+                                print(f"      [+] Found URL for {opt_text_clean}: {video_url}")
+                            break
+                except Exception as click_err:
+                    if verbose:
+                        print(f"      [-] Error clicking option '{opt_text_clean}': {click_err}")
 
         return extracted_urls, cover_image_url
 
     except Exception as e:
-        log.error(f"    [!] Fatal error processing {movie_url}: {e}")
+        if verbose:
+            print(f"    [-] Error processing page: {e}")
         return {}, ""
+
 
 # ──────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────
 
 async def main():
-    parser = argparse.ArgumentParser(description="Endless movie crawler → Firebase")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
+    parser = argparse.ArgumentParser(description="Endless movie crawler bot for cinesubz.lk → Firebase")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print verbose logs")
     args = parser.parse_args()
 
-    # ── Firebase ──────────────────────────────
-    log.info("[*] Connecting to Firebase Realtime Database...")
-    try:
-        movies_ref, processed_ref = init_firebase()
-        log.info(f"[+] Firebase connected: {FIREBASE_DB_URL}/movies")
-    except Exception as e:
-        log.critical(f"[!!] Cannot connect to Firebase: {e}")
-        sys.exit(1)
+    # Connect to Firebase
+    print("[*] Connecting to Firebase Realtime Database...")
+    movies_ref, processed_ref = init_firebase()
+    print(f"[+] Connected: {FIREBASE_DB_URL}/movies")
 
+    # Load already-processed URL keys to skip duplicates
     processed_urls = load_processed_urls(processed_ref)
 
-    # ── Crawler ───────────────────────────────
-    async with async_playwright() as playwright:
-        browser, page = await create_browser_context(playwright)
-        log.info("[+] Browser launched.")
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
 
-        page_num           = 1
-        consecutive_empty  = 0
-        consecutive_errors = 0  # tracks movie-level errors in a row
+        page = await context.new_page()
+        # Auto-close popup tabs to block ad redirects
+        page.on("popup", lambda p: asyncio.create_task(p.close()))
 
-        try:
-            while True:
-                catalog_url = BASE_CATALOG_URL if page_num == 1 else f"{BASE_CATALOG_URL}page/{page_num}/"
+        page_num = 1
+        consecutive_empty_pages = 0
 
-                log.info(f"\n==========================================")
-                log.info(f"[*] Listing Page {page_num}: {catalog_url}")
-                log.info(f"==========================================")
+        while True:
+            if page_num == 1:
+                catalog_url = "https://cinesubz.lk/movies/"
+            else:
+                catalog_url = f"https://cinesubz.lk/movies/page/{page_num}/"
 
-                # ── Fetch movie list ──────────────────────
-                try:
-                    movie_list = await get_movie_list(page, catalog_url, args.verbose)
-                except Exception as e:
-                    log.error(f"[!] Unhandled error fetching catalog page {page_num}: {e}")
-                    log.debug(traceback.format_exc())
-                    page_num += 1
-                    continue
+            print(f"\n==========================================")
+            print(f"[*] Bot Crawling Listing Page {page_num}: {catalog_url}")
+            print(f"==========================================")
 
-                if not movie_list:
-                    consecutive_empty += 1
-                    if consecutive_empty >= 2:
-                        log.info(f"\n[*] Two consecutive empty pages. Crawl complete!")
-                        break
-                    page_num += 1
-                    continue
+            movie_list = await get_movie_list(page, catalog_url, args.verbose)
 
-                consecutive_empty = 0
-                log.info(f"[*] Page {page_num}: {len(movie_list)} movies found.")
-
-                # ── Process each movie ────────────────────
-                for idx, (movie_url, title) in enumerate(movie_list, 1):
-                    # Dedup check
-                    processed_key_check = re.sub(r"[.#$\[\]/]", "_", movie_url)[-150:]
-                    if processed_key_check in processed_urls:
-                        if args.verbose:
-                            log.info(f"[Page {page_num} - {idx}/{len(movie_list)}] Already in Firebase, skipping: '{title}'")
-                        continue
-
-                    log.info(f"[Page {page_num} - {idx}/{len(movie_list)}] Scraping: '{title}'")
-
-                    try:
-                        urls_dict, cover_image_url = await extract_stream_urls(page, movie_url, args.verbose)
-
-                        # Filter to cs06 only
-                        filtered = [v for v in urls_dict.values() if v.startswith(CS06_DOMAIN)]
-
-                        if not filtered:
-                            log.info(f"    [-] No cs06 stream. Skipping: '{title}'")
-                            pkey = mark_processed(processed_ref, movie_url)
-                            processed_urls.add(pkey)
-                            consecutive_errors = 0  # skipping is not an error
-                            continue
-
-                        stream_url = filtered[0]
-
-                        # Save
-                        saved_key, pkey = save_to_firebase(
-                            movies_ref, processed_ref, movie_url,
-                            title=title,
-                            cover_url=cover_image_url,
-                            stream_url=stream_url,
-                        )
-                        processed_urls.add(pkey)
-                        log.info(f"    [+] Saved → Firebase [{saved_key}]")
-                        consecutive_errors = 0  # reset on success
-
-                    except PlaywrightError as pe:
-                        consecutive_errors += 1
-                        log.error(f"    [!!] Playwright error on '{title}': {pe}")
-                        log.debug(traceback.format_exc())
-
-                        # Try to recover the browser if it has crashed
-                        try:
-                            await page.reload(timeout=10000)
-                        except Exception:
-                            log.warning("    [!] Page reload failed. Restarting browser...")
-                            try:
-                                await browser.close()
-                            except Exception:
-                                pass
-                            browser, page = await create_browser_context(playwright)
-                            log.info("    [+] Browser restarted.")
-
-                    except Exception as e:
-                        consecutive_errors += 1
-                        log.error(f"    [!!] Error on '{title}': {e}")
-                        log.debug(traceback.format_exc())
-
-                    finally:
-                        # Circuit breaker: too many errors in a row → pause
-                        if consecutive_errors >= MAX_CONSECUTIVE_ERRS:
-                            log.warning(
-                                f"\n[!!] {consecutive_errors} consecutive errors detected. "
-                                f"Pausing {CONSECUTIVE_ERR_WAIT}s before continuing..."
-                            )
-                            await asyncio.sleep(CONSECUTIVE_ERR_WAIT)
-                            consecutive_errors = 0
-
+            if not movie_list:
+                consecutive_empty_pages += 1
+                if consecutive_empty_pages >= 2:
+                    print(f"\n[*] Consecutively found empty pages (Page {page_num}). Reached the final page!")
+                    break
                 page_num += 1
+                continue
 
-        except KeyboardInterrupt:
-            log.info("\n[*] Interrupted by user (Ctrl+C). Shutting down gracefully...")
+            consecutive_empty_pages = 0
+            print(f"[*] Listing Page {page_num} contains {len(movie_list)} movies.")
 
-        except Exception as e:
-            log.critical(f"\n[!!] Unexpected top-level crash: {e}")
-            log.critical(traceback.format_exc())
+            for idx, (movie_url, title) in enumerate(movie_list, 1):
+                # Skip duplicates
+                if movie_url in processed_urls:
+                    if args.verbose:
+                        print(f"[Page {page_num} - {idx}/{len(movie_list)}] Skipped (already in Firebase): '{title}'")
+                    continue
 
-        finally:
-            try:
-                await browser.close()
-                log.info("[+] Browser closed.")
-            except Exception:
-                pass
+                print(f"[Page {page_num} - {idx}/{len(movie_list)}] Scraping: '{title}'")
+                urls_dict, cover_image_url = await extract_stream_urls(page, movie_url, args.verbose)
 
-    log.info(f"\n[+] Crawl finished. All data saved to: {FIREBASE_DB_URL}/movies")
+                # Filter: only keep URLs from cs06.avatarzone.online
+                filtered_urls = [v for v in urls_dict.values() if v.startswith(CS06_DOMAIN)]
+
+                if not filtered_urls:
+                    print(f"    [-] No cs06 stream found for '{title}'. Skipping.")
+                    # Mark as processed even if skipped (no cs06 URL)
+                    processed_key = re.sub(r"[.#$\[\]/]", "_", movie_url)[-150:]
+                    try:
+                        processed_ref.child(processed_key).set(True)
+                    except Exception:
+                        pass
+                    processed_urls.add(processed_key)
+                    continue
+
+                # Take the first cs06 URL
+                stream_url = filtered_urls[0]
+
+                # Save to Firebase with UUID key
+                try:
+                    saved_key = save_to_firebase(
+                        movies_ref,
+                        processed_ref,
+                        movie_url=movie_url,
+                        title=title,
+                        cover_url=cover_image_url,
+                        stream_url=stream_url,
+                    )
+                    print(f"    [+] Saved to Firebase [{saved_key}]")
+                except Exception as fb_err:
+                    print(f"    [!] Firebase write error: {fb_err}")
+
+
+                processed_urls.add(movie_url)
+
+            page_num += 1
+
+        print(f"\n[+] Crawl complete! All movies saved to Firebase: {FIREBASE_DB_URL}/movies")
+        await browser.close()
 
 
 if __name__ == "__main__":
