@@ -30,29 +30,33 @@ class TvNavBar extends StatelessWidget {
           const SizedBox(height: 12),
           // Centered pill tab bar
           Center(
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: RooflixTheme.surfaceSecondary,
-                borderRadius: BorderRadius.circular(50),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: _tabs.map((item) {
-                  final isSelected = selectedTab == item.tab;
-                  return _TabPill(
-                    item: item,
-                    isSelected: isSelected,
-                    onTap: () => onTabSelected(item.tab),
-                  );
-                }).toList(),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: RooflixTheme.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(50),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _tabs.map((item) {
+                    final isSelected = selectedTab == item.tab;
+                    return _TabPill(
+                      item: item,
+                      isSelected: isSelected,
+                      onTap: () => onTabSelected(item.tab),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           ),
@@ -130,7 +134,7 @@ class _TabPillState extends State<_TabPill>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: widget.isSelected
                   ? RooflixTheme.primary

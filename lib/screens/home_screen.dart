@@ -18,109 +18,68 @@ class HomeScreen extends StatelessWidget {
           final isLoading =
               snapshot.connectionState == ConnectionState.waiting;
 
-          return CustomScrollView(
-            slivers: [
-              // App bar
-              SliverAppBar(
-                pinned: true,
-                backgroundColor: RooflixTheme.background,
-                expandedHeight: 0,
-                toolbarHeight: 56,
-                title: Row(
-                  mainAxisSize: MainAxisSize.min,
+          if (isLoading) {
+            return const MovieGridShimmer();
+          }
+
+          if (movies.isEmpty) {
+            return const Center(
+              child: Text('No Movies Found'),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hero Section
+              _HeroSection(movie: movies.first),
+              
+              // Section Title
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                child: Row(
                   children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            RooflixTheme.primary,
-                            const Color(0xFF5E5CE6),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
+                    Text(
+                      'All Movies',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Rooflix',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: RooflixTheme.textPrimary,
-                        letterSpacing: -0.3,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: RooflixTheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${movies.length}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: RooflixTheme.primary,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Featured hero section - first movie
-              if (!isLoading && movies.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _HeroSection(movie: movies.first),
-                ),
-
-              // Section header
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
-                  child: Row(
-                    children: [
-                      Text(
-                        'All Movies',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(width: 8),
-                      if (!isLoading)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: RooflixTheme.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${movies.length}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: RooflixTheme.primary,
-                            ),
-                          ),
+              // Grid list
+              Expanded(
+                child: MovieGrid(
+                  movies: movies,
+                  onMovieTap: (movie) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Playing: ${movie.title}'),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Movie grid
-              SliverFillRemaining(
-                child: isLoading
-                    ? const MovieGridShimmer()
-                    : MovieGrid(
-                        movies: movies,
-                        onMovieTap: (movie) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Playing: ${movie.title}'),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              backgroundColor: RooflixTheme.primary,
-                            ),
-                          );
-                        },
+                        backgroundColor: RooflixTheme.primary,
                       ),
+                    );
+                  },
+                ),
               ),
             ],
           );
