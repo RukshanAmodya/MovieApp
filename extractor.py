@@ -1,9 +1,13 @@
 import asyncio
 import sys
-import csv
 import os
+import re
 import argparse
 from playwright.async_api import async_playwright
+
+# Firebase Admin SDK
+import firebase_admin
+from firebase_admin import credentials, db
 
 # Reconfigure stdout to support unicode printing on Windows console
 if sys.platform.startswith("win"):
@@ -13,12 +17,76 @@ if sys.platform.startswith("win"):
     except AttributeError:
         pass
 
+# ──────────────────────────────────────────────
+# Firebase Helpers
+# ──────────────────────────────────────────────
+
+SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "rooflix-app-firebase-adminsdk-fbsvc-a93c6036a4.json")
+FIREBASE_DB_URL = "https://rooflix-app-default-rtdb.firebaseio.com"
+CS06_DOMAIN = "https://cs06.avatarzone.online"
+
+def init_firebase():
+    """Initialize Firebase app once."""
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+        firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
+    return db.reference("movies")
+
+def url_to_firebase_key(movie_url: str) -> str:
+    """
+    Derive a stable Firebase-safe key from the movie URL.
+    e.g. https://cinesubz.lk/movies/aval-2026-sinhala-subtitles/
+         → aval-2026-sinhala-subtitles
+    Firebase keys cannot contain . # $ [ ] /
+    """
+    # Extract the slug between /movies/ and trailing /
+    match = re.search(r"/movies/([^/]+)/?$", movie_url)
+    if match:
+        return match.group(1)
+    # Fallback: sanitize the whole URL
+    return re.sub(r"[.#$\[\]/]", "_", movie_url)[-100:]
+
+def load_processed_urls(movies_ref) -> set:
+    """
+    Read all existing movie_url values from Firebase to build
+    the deduplication set. This avoids re-scraping already saved movies.
+    """
+    print("[*] Loading existing movie URLs from Firebase for deduplication...")
+    try:
+        snapshot = movies_ref.get()
+        if not snapshot:
+            print("[*] Firebase is empty. Starting fresh.")
+            return set()
+        # Each value has a 'movie_url' field
+        urls = set()
+        for key, data in snapshot.items():
+            if isinstance(data, dict) and "movie_url" in data:
+                urls.add(data["movie_url"])
+        print(f"[+] Found {len(urls)} already-saved movie(s) in Firebase.")
+        return urls
+    except Exception as e:
+        print(f"[!] Warning: could not read Firebase: {e}")
+        return set()
+
+def save_to_firebase(movies_ref, key: str, title: str, movie_url: str,
+                     cover_image_url: str, stream_urls: dict):
+    """Write a single movie record to Firebase Realtime Database."""
+    movies_ref.child(key).set({
+        "title": title,
+        "movie_url": movie_url,
+        "cover_image_url": cover_image_url,
+        "stream_urls": stream_urls,
+    })
+
+# ──────────────────────────────────────────────
+# Scraper Functions
+# ──────────────────────────────────────────────
+
 async def get_movie_list(page, base_url, verbose=False):
     if verbose:
         print(f"[*] Fetching movie catalog from: {base_url}")
-        
+
     try:
-        # standard navigation with retries
         for attempt in range(3):
             try:
                 response = await page.goto(base_url, wait_until="domcontentloaded", timeout=60000)
@@ -34,42 +102,44 @@ async def get_movie_list(page, base_url, verbose=False):
                 await page.wait_for_timeout(3000)
 
         await page.wait_for_timeout(2500)
-        
-        # Locate movie links in grid/listing
+
         anchors = await page.locator("a").all()
         movie_links = []
-        
+
         for anchor in anchors:
             try:
                 href = await anchor.get_attribute("href")
                 title = await anchor.get_attribute("title") or await anchor.inner_text()
                 title = title.strip()
-                
+
                 if href:
                     clean_href = href.split('?')[0].split('#')[0]
-                    if "/movies/" in clean_href and clean_href.rstrip('/') != "https://cinesubz.lk/movies" and not "/page/" in clean_href:
+                    if ("/movies/" in clean_href
+                            and clean_href.rstrip('/') != "https://cinesubz.lk/movies"
+                            and "/page/" not in clean_href):
                         if clean_href not in [link[0] for link in movie_links]:
                             movie_links.append((clean_href, title or "Unknown Movie"))
             except Exception:
                 continue
-                        
+
         if verbose:
             print(f"[+] Found {len(movie_links)} movie link(s) on page.")
         return movie_links
+
     except Exception as e:
         if verbose:
             print(f"[-] Error loading catalog page: {e}")
         return []
 
+
 async def extract_stream_urls(page, movie_url, verbose=False):
     if verbose:
         print(f"\n[*] Processing movie: {movie_url}")
-        
+
     extracted_urls = {}
     cover_image_url = ""
-    
+
     try:
-        # Load movie page with retries
         for attempt in range(3):
             try:
                 await page.goto(movie_url, wait_until="domcontentloaded", timeout=60000)
@@ -89,7 +159,6 @@ async def extract_stream_urls(page, movie_url, verbose=False):
             if verbose and cover_image_url:
                 print(f"    [+] Found Cover Image: {cover_image_url}")
 
-        
         # 1. Click splash-play button first to initialize player
         splash_play = page.locator("#splash-play")
         if await splash_play.count() > 0 and await splash_play.is_visible():
@@ -101,18 +170,17 @@ async def extract_stream_urls(page, movie_url, verbose=False):
             except Exception as click_err:
                 if verbose:
                     print(f"    [!] Error clicking splash-play: {click_err}")
-            
+
         # 2. Look for option tabs (Zetaflix/Dooplay servers)
         server_options = await page.locator("#playeroptions li").all()
-        
+
         if not server_options:
-            # Fallback if no server tabs exist
             iframes = await page.locator("iframe").all()
-            for idx, iframe in enumerate(iframes):
+            for iframe in iframes:
                 try:
                     src = await iframe.get_attribute("src")
                     iframe_id = await iframe.get_attribute("id")
-                    if src and "youtube.com" not in src and src != "null" and src != "" and iframe_id != "trailer-view":
+                    if src and "youtube.com" not in src and src not in ("null", "", None) and iframe_id != "trailer-view":
                         video_url = src
                         try:
                             el_handle = await iframe.element_handle()
@@ -132,29 +200,28 @@ async def extract_stream_urls(page, movie_url, verbose=False):
         else:
             if verbose:
                 print(f"    [*] Found {len(server_options)} player options. Extracting streams...")
-                
-            for idx, opt in enumerate(server_options):
+
+            for opt in server_options:
+                opt_text_clean = ""
                 try:
                     opt_text = await opt.inner_text()
                     opt_text_clean = opt_text.replace("\n", " ").strip()
-                    
-                    # Exclude trailers
+
                     if "trailer" in opt_text_clean.lower() or "youtube" in opt_text_clean.lower():
                         continue
-                        
+
                     if verbose:
                         print(f"    [*] Clicking player option: '{opt_text_clean}'")
-                        
+
                     await opt.click(timeout=5000)
-                    # Wait for iframe load
                     await page.wait_for_timeout(4500)
-                    
+
                     iframes = await page.locator("iframe").all()
                     for iframe in iframes:
                         src = await iframe.get_attribute("src")
                         iframe_id = await iframe.get_attribute("id")
-                        
-                        if src and "youtube.com" not in src and src != "null" and src != "" and iframe_id != "trailer-view":
+
+                        if src and "youtube.com" not in src and src not in ("null", "", None) and iframe_id != "trailer-view":
                             video_url = src
                             try:
                                 el_handle = await iframe.element_handle()
@@ -167,7 +234,7 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                                         video_url = direct_src
                             except Exception:
                                 pass
-                                
+
                             extracted_urls[opt_text_clean] = video_url
                             if verbose:
                                 print(f"      [+] Found URL for {opt_text_clean}: {video_url}")
@@ -175,120 +242,110 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                 except Exception as click_err:
                     if verbose:
                         print(f"      [-] Error clicking option '{opt_text_clean}': {click_err}")
-                        
-        if extracted_urls:
-            return extracted_urls, cover_image_url
-        else:
-            return {"Status": "NO_STREAMS_FOUND"}, cover_image_url
-            
+
+        return extracted_urls, cover_image_url
+
     except Exception as e:
         if verbose:
             print(f"    [-] Error processing page: {e}")
-        return {"Status": f"ERROR: {str(e)}"}, ""
+        return {}, ""
+
+
+# ──────────────────────────────────────────────
+# Main
+# ──────────────────────────────────────────────
 
 async def main():
-    parser = argparse.ArgumentParser(description="Endless movie crawler bot for cinesubz.lk")
-    parser.add_argument("--output", default="movies_stream_urls.csv", help="The output CSV file path")
+    parser = argparse.ArgumentParser(description="Endless movie crawler bot for cinesubz.lk → Firebase")
     parser.add_argument("-v", "--verbose", action="store_true", help="Print verbose logs")
     args = parser.parse_args()
 
+    # Connect to Firebase
+    print("[*] Connecting to Firebase Realtime Database...")
+    movies_ref = init_firebase()
+    print(f"[+] Connected: {FIREBASE_DB_URL}/movies")
+
+    # Load already-saved URLs to skip duplicates
+    processed_urls = load_processed_urls(movies_ref)
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        # Using desktop User-Agent
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
-        
+
         page = await context.new_page()
-        
         # Auto-close popup tabs to block ad redirects
         page.on("popup", lambda p: asyncio.create_task(p.close()))
-        
-        csv_file_path = args.output
-        file_exists = os.path.exists(csv_file_path)
-        headers = ["Title", "Movie Page URL", "Cover Image URL", "Extracted Stream URLs"]
-        
-        # Load already processed URLs to avoid scraping duplicates if rerun
-        processed_urls = set()
-        if file_exists:
-            try:
-                with open(csv_file_path, mode="r", encoding="utf-8") as rf:
-                    reader = csv.reader(rf)
-                    # skip header
-                    next(reader, None)
-                    for row in reader:
-                        if len(row) > 1:
-                            processed_urls.add(row[1])
-            except Exception as err:
-                print(f"[!] Warning reading existing CSV: {err}")
 
-        with open(csv_file_path, mode="a", encoding="utf-8", newline="") as csv_file:
-            writer = csv.writer(csv_file)
-            if not file_exists:
-                writer.writerow(headers)
-            
-            page_num = 1
-            consecutive_empty_pages = 0
-            
-            while True:
-                # Construct page URL
-                if page_num == 1:
-                    catalog_url = "https://cinesubz.lk/movies/"
-                else:
-                    catalog_url = f"https://cinesubz.lk/movies/page/{page_num}/"
-                
-                print(f"\n==========================================")
-                print(f"[*] Bot Crawling Listing Page {page_num}: {catalog_url}")
-                print(f"==========================================")
-                
-                # Fetch movie list for this listing page
-                movie_list = await get_movie_list(page, catalog_url, args.verbose)
-                
-                # If page contains no movies, retry once or check if we are at the end
-                if not movie_list:
-                    consecutive_empty_pages += 1
-                    if consecutive_empty_pages >= 2:
-                        print(f"\n[*] Consecutively found empty pages (Page {page_num}). Reached the final page!")
-                        break
-                    page_num += 1
-                    continue
-                
-                # Reset counter when we find movies
-                consecutive_empty_pages = 0
-                print(f"[*] Listing Page {page_num} contains {len(movie_list)} movies.")
-                
-                for idx, (movie_url, title) in enumerate(movie_list, 1):
-                    # Check if already processed
-                    if movie_url in processed_urls:
-                        if args.verbose:
-                            print(f"[Page {page_num} - {idx}/{len(movie_list)}] Skipped (already processed): '{title}'")
-                        continue
-                        
-                    print(f"[Page {page_num} - {idx}/{len(movie_list)}] Scraped: '{title}'")
-                    urls_dict, cover_image_url = await extract_stream_urls(page, movie_url, args.verbose)
-                    
-                    # Filter: only keep URLs from cs06.avatarzone.online
-                    CS06_DOMAIN = "https://cs06.avatarzone.online"
-                    filtered_urls = {k: v for k, v in urls_dict.items() if v.startswith(CS06_DOMAIN)}
-                    
-                    # Skip this movie if no cs06 URLs were found
-                    if not filtered_urls:
-                        print(f"    [-] No cs06 stream found for '{title}'. Skipping.")
-                        processed_urls.add(movie_url)
-                        continue
-                    
-                    # Format output string (only cs06 URLs)
-                    urls_str = "; ".join([f"{k}: {v}" for k, v in filtered_urls.items()])
-                    
-                    # Save immediately to prevent data loss
-                    writer.writerow([title, movie_url, cover_image_url, urls_str])
-                    csv_file.flush()
-                    processed_urls.add(movie_url)
-                
+        page_num = 1
+        consecutive_empty_pages = 0
+
+        while True:
+            if page_num == 1:
+                catalog_url = "https://cinesubz.lk/movies/"
+            else:
+                catalog_url = f"https://cinesubz.lk/movies/page/{page_num}/"
+
+            print(f"\n==========================================")
+            print(f"[*] Bot Crawling Listing Page {page_num}: {catalog_url}")
+            print(f"==========================================")
+
+            movie_list = await get_movie_list(page, catalog_url, args.verbose)
+
+            if not movie_list:
+                consecutive_empty_pages += 1
+                if consecutive_empty_pages >= 2:
+                    print(f"\n[*] Consecutively found empty pages (Page {page_num}). Reached the final page!")
+                    break
                 page_num += 1
-                
-        print(f"\n[+] Scrape execution complete! Saved output: {os.path.abspath(csv_file_path)}")
+                continue
+
+            consecutive_empty_pages = 0
+            print(f"[*] Listing Page {page_num} contains {len(movie_list)} movies.")
+
+            for idx, (movie_url, title) in enumerate(movie_list, 1):
+                # Skip duplicates
+                if movie_url in processed_urls:
+                    if args.verbose:
+                        print(f"[Page {page_num} - {idx}/{len(movie_list)}] Skipped (already in Firebase): '{title}'")
+                    continue
+
+                print(f"[Page {page_num} - {idx}/{len(movie_list)}] Scraping: '{title}'")
+                urls_dict, cover_image_url = await extract_stream_urls(page, movie_url, args.verbose)
+
+                # Filter: only keep URLs from cs06.avatarzone.online
+                filtered_urls = {k: v for k, v in urls_dict.items() if v.startswith(CS06_DOMAIN)}
+
+                if not filtered_urls:
+                    print(f"    [-] No cs06 stream found for '{title}'. Skipping.")
+                    processed_urls.add(movie_url)
+                    continue
+
+                # Build Firebase key from movie URL slug
+                firebase_key = url_to_firebase_key(movie_url)
+
+                # Save to Firebase
+                try:
+                    save_to_firebase(
+                        movies_ref,
+                        key=firebase_key,
+                        title=title,
+                        movie_url=movie_url,
+                        cover_image_url=cover_image_url,
+                        stream_urls=filtered_urls,
+                    )
+                    print(f"    [+] Saved to Firebase: '{firebase_key}'")
+                except Exception as fb_err:
+                    print(f"    [!] Firebase write error: {fb_err}")
+
+                processed_urls.add(movie_url)
+
+            page_num += 1
+
+        print(f"\n[+] Crawl complete! All movies saved to Firebase: {FIREBASE_DB_URL}/movies")
         await browser.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
