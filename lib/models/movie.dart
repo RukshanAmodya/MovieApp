@@ -23,12 +23,16 @@ class Movie {
         slug: '',
       );
     }
+    
+    final rawCover = map['cover_url']?.toString() ?? map['coverUrl']?.toString() ?? '';
+    final rawStream = map['stream_url']?.toString() ?? map['streamUrl']?.toString() ?? '';
+
     return Movie(
       id: id,
-      title: map['title']?.toString() ?? 'Unknown Title',
-      coverUrl: map['cover_url']?.toString() ?? map['coverUrl']?.toString() ?? '',
-      streamUrl: map['stream_url']?.toString() ?? map['streamUrl']?.toString() ?? '',
-      slug: map['slug']?.toString() ?? '',
+      title: map['title']?.toString().trim() ?? 'Unknown Title',
+      coverUrl: rawCover.trim(),
+      streamUrl: rawStream.trim(),
+      slug: map['slug']?.toString().trim() ?? '',
     );
   }
 
