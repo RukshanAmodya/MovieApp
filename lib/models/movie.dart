@@ -13,12 +13,21 @@ class Movie {
     required this.slug,
   });
 
-  factory Movie.fromMap(String id, Map<dynamic, dynamic> map) {
+  factory Movie.fromMap(String id, dynamic map) {
+    if (map is! Map) {
+      return Movie(
+        id: id,
+        title: 'Unknown Title',
+        coverUrl: '',
+        streamUrl: '',
+        slug: '',
+      );
+    }
     return Movie(
       id: id,
       title: map['title']?.toString() ?? 'Unknown Title',
-      coverUrl: map['cover_url']?.toString() ?? '',
-      streamUrl: map['stream_url']?.toString() ?? '',
+      coverUrl: map['cover_url']?.toString() ?? map['coverUrl']?.toString() ?? '',
+      streamUrl: map['stream_url']?.toString() ?? map['streamUrl']?.toString() ?? '',
       slug: map['slug']?.toString() ?? '',
     );
   }
