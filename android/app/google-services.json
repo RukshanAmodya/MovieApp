@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "110749291342",
+    "firebase_url": "https://rooflix-app-default-rtdb.firebaseio.com",
+    "project_id": "rooflix-app",
+    "storage_bucket": "rooflix-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:110749291342:android:161e211414c15350e9441f",
+        "android_client_info": {
+          "package_name": "com.questrax.rooflix"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "110749291342-ocfral5bni03csnbc7au5os8ers34ko1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3eo55U9kgJA3m_XIEMmMJfGLK4TXnLRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "110749291342-ocfral5bni03csnbc7au5os8ers34ko1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
