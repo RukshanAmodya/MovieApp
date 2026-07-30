@@ -27,45 +27,58 @@ FIREBASE_DB_URL = "https://rooflix-app-default-rtdb.firebaseio.com"
 CS06_DOMAIN = "https://cs06.avatarzone.online"
 
 def init_firebase():
-    """Initialize Firebase app once. Returns (movies_ref, processed_ref)."""
+    """Initialize Firebase app once. Returns movies_ref."""
     if not firebase_admin._apps:
         cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
         firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
-    return db.reference("movies"), db.reference("_processed")
-
-
-def load_processed_urls(processed_ref) -> set:
-    """
-    Read already-scraped movie URLs from the _processed Firebase node.
-    This is separate from movies data so movies stays clean.
-    """
-    print("[*] Loading processed URLs from Firebase for deduplication...")
+    movies_ref = db.reference("movies")
+    # Clean up old _processed node if it exists (one-time migration)
     try:
-        snapshot = processed_ref.get()
+        db.reference("_processed").delete()
+    except Exception:
+        pass
+    return movies_ref
+
+
+def load_processed_slugs(movies_ref) -> set:
+    """
+    Read slug fields from existing movies in Firebase for deduplication.
+    The slug (e.g. 'aval-2026-sinhala-subtitles') is derived from the movie URL.
+    """
+    print("[*] Loading existing slugs from Firebase for deduplication...")
+    try:
+        snapshot = movies_ref.get()
         if not snapshot:
-            print("[*] No processed URLs found. Starting fresh.")
+            print("[*] Firebase movies is empty. Starting fresh.")
             return set()
-        # Keys are base64-encoded movie URLs stored as True
-        urls = set(snapshot.keys())
-        print(f"[+] Found {len(urls)} already-processed movie(s).")
-        return urls
+        slugs = set()
+        for data in snapshot.values():
+            if isinstance(data, dict) and "slug" in data:
+                slugs.add(data["slug"])
+        print(f"[+] Found {len(slugs)} already-saved movie(s) in Firebase.")
+        return slugs
     except Exception as e:
-        print(f"[!] Warning: could not read Firebase _processed: {e}")
+        print(f"[!] Warning: could not read Firebase movies: {e}")
         return set()
 
-def save_to_firebase(movies_ref, processed_ref, movie_url: str,
-                     title: str, cover_url: str, stream_url: str):
-    """Write movie to Firebase with UUID key. Track URL in _processed for dedup."""
+
+def url_to_slug(movie_url: str) -> str:
+    """Extract the clean slug from a movie URL.
+    e.g. https://cinesubz.lk/movies/aval-2026-sinhala-subtitles/ → aval-2026-sinhala-subtitles
+    """
+    match = re.search(r"/movies/([^/]+)/?$", movie_url)
+    return match.group(1) if match else movie_url.rstrip("/").split("/")[-1]
+
+
+def save_to_firebase(movies_ref, slug: str, title: str, cover_url: str, stream_url: str):
+    """Write a clean movie record to Firebase with a UUID key."""
     key = str(uuid.uuid4())
-    # Save clean movie data
     movies_ref.child(key).set({
         "title": title,
         "cover_url": cover_url,
         "stream_url": stream_url,
+        "slug": slug,
     })
-    # Mark as processed using a sanitized URL key
-    processed_key = re.sub(r"[.#$\[\]/]", "_", movie_url)[-150:]
-    processed_ref.child(processed_key).set(True)
     return key
 
 # ──────────────────────────────────────────────
@@ -252,11 +265,11 @@ async def main():
 
     # Connect to Firebase
     print("[*] Connecting to Firebase Realtime Database...")
-    movies_ref, processed_ref = init_firebase()
+    movies_ref = init_firebase()
     print(f"[+] Connected: {FIREBASE_DB_URL}/movies")
 
-    # Load already-processed URL keys to skip duplicates
-    processed_urls = load_processed_urls(processed_ref)
+    # Load already-saved slugs to skip duplicates on resume
+    processed_slugs = load_processed_slugs(movies_ref)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -295,8 +308,10 @@ async def main():
             print(f"[*] Listing Page {page_num} contains {len(movie_list)} movies.")
 
             for idx, (movie_url, title) in enumerate(movie_list, 1):
-                # Skip duplicates
-                if movie_url in processed_urls:
+                slug = url_to_slug(movie_url)
+
+                # Skip duplicates using slug
+                if slug in processed_slugs:
                     if args.verbose:
                         print(f"[Page {page_num} - {idx}/{len(movie_list)}] Skipped (already in Firebase): '{title}'")
                     continue
@@ -309,13 +324,7 @@ async def main():
 
                 if not filtered_urls:
                     print(f"    [-] No cs06 stream found for '{title}'. Skipping.")
-                    # Mark as processed even if skipped (no cs06 URL)
-                    processed_key = re.sub(r"[.#$\[\]/]", "_", movie_url)[-150:]
-                    try:
-                        processed_ref.child(processed_key).set(True)
-                    except Exception:
-                        pass
-                    processed_urls.add(processed_key)
+                    processed_slugs.add(slug)
                     continue
 
                 # Take the first cs06 URL
@@ -325,8 +334,7 @@ async def main():
                 try:
                     saved_key = save_to_firebase(
                         movies_ref,
-                        processed_ref,
-                        movie_url=movie_url,
+                        slug=slug,
                         title=title,
                         cover_url=cover_image_url,
                         stream_url=stream_url,
@@ -335,8 +343,7 @@ async def main():
                 except Exception as fb_err:
                     print(f"    [!] Firebase write error: {fb_err}")
 
-
-                processed_urls.add(movie_url)
+                processed_slugs.add(slug)
 
             page_num += 1
 
