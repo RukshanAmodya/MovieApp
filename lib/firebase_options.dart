@@ -1,4 +1,4 @@
-// File generated manually from google-services.json
+// File generated manually from original google-services.json config
 // Project: rooflix-app
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
