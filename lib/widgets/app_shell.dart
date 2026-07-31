@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
+import '../core/focus_helper.dart';
 import '../services/auth_service.dart';
 import '../screens/home_screen.dart';
 import '../screens/search_screen.dart';
@@ -47,7 +48,13 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       backgroundColor: RooflixTheme.background,
-      body: isWide
+      body: TvKeyboardShortcuts(
+        onBack: () {
+          // Allow Navigator to pop if there's a route to pop
+          final nav = Navigator.of(context, rootNavigator: false);
+          if (nav.canPop()) nav.pop();
+        },
+        child: isWide
           ? Row(
               children: [
                 // --- Left Sidebar ---
@@ -84,6 +91,7 @@ class _AppShellState extends State<AppShell> {
                 ),
               ],
             ),
+      ),
     );
   }
 }
@@ -295,46 +303,59 @@ class _SidebarItemState extends State<_SidebarItem> {
   @override
   Widget build(BuildContext context) {
     final active = widget.isActive;
-    return Focus(
-      onFocusChange: (f) => setState(() => _hovering = f),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovering = true),
-        onExit: (_) => setState(() => _hovering = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: active
-                  ? RooflixTheme.primary.withValues(alpha: 0.08)
-                  : (_hovering
-                      ? RooflixTheme.primary.withValues(alpha: 0.04)
-                      : Colors.transparent),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  widget.icon,
-                  size: 20,
-                  color: active ? RooflixTheme.primary : RooflixTheme.textSecondary,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  widget.label,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    color: active ? RooflixTheme.primary : RooflixTheme.textSecondary,
+    // TvFocusDetector gives us D-pad Select/Enter + isFocused state
+    return TvFocusDetector(
+      onSelect: widget.onTap,
+      builder: (context, isFocused) {
+        final highlighted = active || _hovering || isFocused;
+        return MouseRegion(
+          onEnter: (_) => setState(() => _hovering = true),
+          onExit: (_) => setState(() => _hovering = false),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: active
+                    ? RooflixTheme.primary.withValues(alpha: 0.08)
+                    : (highlighted
+                        ? RooflixTheme.primary.withValues(alpha: 0.05)
+                        : Colors.transparent),
+                borderRadius: BorderRadius.circular(14),
+                border: isFocused && !active
+                    ? Border.all(
+                        color: RooflixTheme.focusRing.withValues(alpha: 0.4),
+                        width: 1.5)
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.icon,
+                    size: 20,
+                    color: highlighted
+                        ? RooflixTheme.primary
+                        : RooflixTheme.textSecondary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Text(
+                    widget.label,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                      color: highlighted
+                          ? RooflixTheme.primary
+                          : RooflixTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

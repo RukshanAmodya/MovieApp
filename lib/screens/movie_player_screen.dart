@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../models/movie.dart';
 import '../core/theme.dart';
+import '../core/focus_helper.dart';
 
 class MoviePlayerScreen extends StatefulWidget {
   final Movie movie;
@@ -61,7 +62,9 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
+      body: TvKeyboardShortcuts(
+        onBack: () => Navigator.of(context).pop(),
+        child: GestureDetector(
         onTap: () => setState(() => _showControls = !_showControls),
         child: Stack(
           alignment: Alignment.center,
@@ -182,6 +185,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

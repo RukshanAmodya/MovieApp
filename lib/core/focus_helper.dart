@@ -57,7 +57,8 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.select ||
               event.logicalKey == LogicalKeyboardKey.enter ||
-              event.logicalKey == LogicalKeyboardKey.space) {
+              event.logicalKey == LogicalKeyboardKey.space ||
+              event.logicalKey == LogicalKeyboardKey.gameButtonA) {
             widget.onSelect?.call();
             return KeyEventResult.handled;
           }
@@ -69,8 +70,8 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
   }
 }
 
-/// Creates a [FocusTraversalGroup] with [OrderedTraversalPolicy]
-/// so D-pad navigates predictably through a grid.
+/// Creates a [FocusTraversalGroup] with [ReadingOrderTraversalPolicy]
+/// so D-pad navigates predictably through a grid left→right, top→bottom.
 class TvGridFocusGroup extends StatelessWidget {
   final Widget child;
   const TvGridFocusGroup({super.key, required this.child});
@@ -79,6 +80,56 @@ class TvGridFocusGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return FocusTraversalGroup(
       policy: ReadingOrderTraversalPolicy(),
+      child: child,
+    );
+  }
+}
+
+/// Global key event handler that intercepts D-pad arrow keys and
+/// routes them to Flutter's focus system, and handles Back/Escape.
+class TvKeyboardShortcuts extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onBack;
+
+  const TvKeyboardShortcuts({
+    super.key,
+    required this.child,
+    this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyboardListener(
+      focusNode: FocusNode(skipTraversal: true),
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent) {
+          switch (event.logicalKey) {
+            case LogicalKeyboardKey.arrowUp:
+              FocusManager.instance.primaryFocus
+                  ?.focusInDirection(TraversalDirection.up);
+              break;
+            case LogicalKeyboardKey.arrowDown:
+              FocusManager.instance.primaryFocus
+                  ?.focusInDirection(TraversalDirection.down);
+              break;
+            case LogicalKeyboardKey.arrowLeft:
+              FocusManager.instance.primaryFocus
+                  ?.focusInDirection(TraversalDirection.left);
+              break;
+            case LogicalKeyboardKey.arrowRight:
+              FocusManager.instance.primaryFocus
+                  ?.focusInDirection(TraversalDirection.right);
+              break;
+            case LogicalKeyboardKey.escape:
+            case LogicalKeyboardKey.backspace:
+            case LogicalKeyboardKey.goBack:
+              onBack?.call();
+              break;
+            default:
+              break;
+          }
+        }
+      },
       child: child,
     );
   }
