@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
 import '../models/movie.dart';
 import '../services/movie_service.dart';
-import '../widgets/movie_grid.dart';
+import '../widgets/movie_card.dart';
+import '../widgets/app_shell.dart';
+import 'movie_player_screen.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final ValueChanged<AppPage>? onNavigate;
+  const SearchScreen({super.key, this.onNavigate});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -55,79 +59,199 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
         // Search bar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: TextField(
-            controller: _controller,
-            autofocus: false,
-            decoration: InputDecoration(
-              hintText: 'Search movies...',
-              hintStyle: TextStyle(color: RooflixTheme.textTertiary),
-              prefixIcon: Icon(Icons.search_rounded,
-                  color: RooflixTheme.textSecondary),
-              suffixIcon: _controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear_rounded,
-                          color: RooflixTheme.textSecondary),
-                      onPressed: () {
-                        _controller.clear();
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: RooflixTheme.primary,
-                  width: 1.5,
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Search',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: RooflixTheme.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Search movies, titles...',
+                    hintStyle: GoogleFonts.plusJakartaSans(
+                      color: RooflixTheme.textMuted,
+                      fontSize: 15,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: RooflixTheme.textMuted,
+                      size: 22,
+                    ),
+                    suffixIcon: _controller.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear_rounded,
+                                color: RooflixTheme.textMuted),
+                            onPressed: () => _controller.clear(),
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide:
+                          BorderSide(color: RooflixTheme.separator, width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide(
+                          color: RooflixTheme.primary, width: 2),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        // Results count
-        if (!_loading)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '${_results.length} result${_results.length != 1 ? 's' : ''}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-          ),
-        // Grid
-        Expanded(
-          child: _loading
-              ? const MovieGridShimmer()
-              : _results.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.search_off_rounded,
-                              size: 56, color: RooflixTheme.textTertiary),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No results found',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ],
+
+        // Results count / status
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+            child: _loading
+                ? Text(
+                    'Loading...',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: RooflixTheme.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Text(
+                        '${_results.length} result${_results.length != 1 ? 's' : ''}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: RooflixTheme.textPrimary,
+                        ),
                       ),
-                    )
-                  : MovieGrid(movies: _results),
+                      if (_controller.text.isNotEmpty) ...[
+                        Text(
+                          '  for  ',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15,
+                            color: RooflixTheme.textMuted,
+                          ),
+                        ),
+                        Text(
+                          '"${_controller.text}"',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: RooflixTheme.primary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+          ),
         ),
+
+        // Grid
+        if (_loading)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 200,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 0.66,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(color: RooflixTheme.surfaceSecondary),
+                ),
+                childCount: 8,
+              ),
+            ),
+          )
+        else if (_results.isEmpty)
+          SliverFillRemaining(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.search_off_rounded,
+                      size: 64, color: RooflixTheme.textMuted),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No results found',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: RooflixTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try a different search term',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      color: RooflixTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 200,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 0.66,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final movie = _results[index];
+                  return MovieCard(
+                    movie: movie,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder: (context, anim, secondaryAnim) =>
+                              MoviePlayerScreen(movie: movie),
+                          transitionsBuilder: (context, anim, secondaryAnim, child) =>
+                              FadeTransition(opacity: anim, child: child),
+                          transitionDuration:
+                              const Duration(milliseconds: 300),
+                        ),
+                      );
+                    },
+                  );
+                },
+                childCount: _results.length,
+              ),
+            ),
+          ),
       ],
     );
   }
