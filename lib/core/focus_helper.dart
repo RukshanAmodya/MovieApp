@@ -90,11 +90,17 @@ class TvGridFocusGroup extends StatelessWidget {
 class TvKeyboardShortcuts extends StatelessWidget {
   final Widget child;
   final VoidCallback? onBack;
+  final VoidCallback? onPlayPause;
+  final VoidCallback? onSeekLeft;
+  final VoidCallback? onSeekRight;
 
   const TvKeyboardShortcuts({
     super.key,
     required this.child,
     this.onBack,
+    this.onPlayPause,
+    this.onSeekLeft,
+    this.onSeekRight,
   });
 
   @override
@@ -103,7 +109,27 @@ class TvKeyboardShortcuts extends StatelessWidget {
       focusNode: FocusNode(skipTraversal: true),
       onKeyEvent: (event) {
         if (event is KeyDownEvent) {
-          switch (event.logicalKey) {
+          final key = event.logicalKey;
+          
+          // Media Play/Pause Remote Buttons
+          if (key == LogicalKeyboardKey.mediaPlayPause ||
+              key == LogicalKeyboardKey.mediaPlay ||
+              key == LogicalKeyboardKey.mediaPause) {
+            onPlayPause?.call();
+            return;
+          }
+
+          // Media Rewind / FastForward Remote Buttons
+          if (key == LogicalKeyboardKey.mediaRewind) {
+            onSeekLeft?.call();
+            return;
+          }
+          if (key == LogicalKeyboardKey.mediaFastForward) {
+            onSeekRight?.call();
+            return;
+          }
+
+          switch (key) {
             case LogicalKeyboardKey.arrowUp:
               FocusManager.instance.primaryFocus
                   ?.focusInDirection(TraversalDirection.up);
@@ -113,12 +139,28 @@ class TvKeyboardShortcuts extends StatelessWidget {
                   ?.focusInDirection(TraversalDirection.down);
               break;
             case LogicalKeyboardKey.arrowLeft:
-              FocusManager.instance.primaryFocus
-                  ?.focusInDirection(TraversalDirection.left);
+              if (onSeekLeft != null) {
+                onSeekLeft!();
+              } else {
+                FocusManager.instance.primaryFocus
+                    ?.focusInDirection(TraversalDirection.left);
+              }
               break;
             case LogicalKeyboardKey.arrowRight:
-              FocusManager.instance.primaryFocus
-                  ?.focusInDirection(TraversalDirection.right);
+              if (onSeekRight != null) {
+                onSeekRight!();
+              } else {
+                FocusManager.instance.primaryFocus
+                    ?.focusInDirection(TraversalDirection.right);
+              }
+              break;
+            case LogicalKeyboardKey.select:
+            case LogicalKeyboardKey.enter:
+            case LogicalKeyboardKey.space:
+            case LogicalKeyboardKey.gameButtonA:
+              if (onPlayPause != null) {
+                onPlayPause!();
+              }
               break;
             case LogicalKeyboardKey.escape:
             case LogicalKeyboardKey.backspace:

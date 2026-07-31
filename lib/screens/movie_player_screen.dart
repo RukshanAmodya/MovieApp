@@ -52,12 +52,14 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
   }
 
   void _togglePlayPause() {
+    if (!_isInitialized || _hasError) return;
     setState(() {
       if (_controller.value.isPlaying) {
         _controller.pause();
       } else {
         _controller.play();
       }
+      _showControls = true;
     });
   }
 
@@ -78,9 +80,11 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
   }
 
   void _seekRelative(Duration duration) {
+    if (!_isInitialized || _hasError) return;
     final currentPos = _controller.value.position;
     final newPos = currentPos + duration;
     _controller.seekTo(newPos);
+    setState(() => _showControls = true);
   }
 
   String _formatDuration(Duration duration) {
@@ -100,12 +104,16 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
       backgroundColor: Colors.black,
       body: TvKeyboardShortcuts(
         onBack: () => Navigator.of(context).pop(),
+        onPlayPause: _togglePlayPause,
+        onSeekLeft: () => _seekRelative(const Duration(seconds: -10)),
+        onSeekRight: () => _seekRelative(const Duration(seconds: 10)),
         child: GestureDetector(
           onTap: () => setState(() => _showControls = !_showControls),
+          behavior: HitTestBehavior.opaque,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // 1. Video Display Layer
+              // 1. Video Player Area
               Center(
                 child: _hasError
                     ? Column(
@@ -154,15 +162,15 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                           ),
               ),
 
-              // 2. Glassmorphism OS Controls Overlay
+              // 2. Overlay Player Controls
               if (_showControls) ...[
-                // Top Header Bar
+                // Top Header Bar with Back Button & Movie Title
                 Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(28, 44, 28, 24),
+                    padding: const EdgeInsets.fromLTRB(24, 36, 24, 20),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -187,7 +195,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                 decoration: BoxDecoration(
                                   color: isFocused
                                       ? RooflixTheme.primary
-                                      : Colors.white.withValues(alpha: 0.15),
+                                      : Colors.white.withValues(alpha: 0.18),
                                   shape: BoxShape.circle,
                                   boxShadow: isFocused
                                       ? [
@@ -212,7 +220,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                             widget.movie.title,
                             style: GoogleFonts.plusJakartaSans(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.3,
                             ),
@@ -225,24 +233,24 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                   ),
                 ),
 
-                // Center Glass Floating Playback Controls Bar
+                // Center Floating Glass Playback Capsule (Playback Controls)
                 if (_isInitialized && !_hasError)
                   Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                          horizontal: 20, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: Colors.black.withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(40),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: Colors.white.withValues(alpha: 0.18),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 28,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
@@ -255,7 +263,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                 _seekRelative(const Duration(seconds: -10)),
                             builder: (context, isFocused) {
                               return IconButton(
-                                iconSize: 32,
+                                iconSize: 28,
                                 icon: Icon(
                                   Icons.replay_10_rounded,
                                   color: isFocused
@@ -267,7 +275,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                               );
                             },
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
 
                           // Main Play / Pause Button
                           TvFocusDetector(
@@ -276,8 +284,8 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                               return GestureDetector(
                                 onTap: _togglePlayPause,
                                 child: Container(
-                                  width: 60,
-                                  height: 60,
+                                  width: 54,
+                                  height: 54,
                                   decoration: BoxDecoration(
                                     color: RooflixTheme.primary,
                                     shape: BoxShape.circle,
@@ -285,7 +293,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                       BoxShadow(
                                         color: RooflixTheme.primary
                                             .withValues(alpha: 0.5),
-                                        blurRadius: 24,
+                                        blurRadius: 20,
                                         spreadRadius: 2,
                                       ),
                                     ],
@@ -299,13 +307,13 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                         ? Icons.pause_rounded
                                         : Icons.play_arrow_rounded,
                                     color: Colors.white,
-                                    size: 36,
+                                    size: 32,
                                   ),
                                 ),
                               );
                             },
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
 
                           // +10s Fast Forward
                           TvFocusDetector(
@@ -313,7 +321,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                 _seekRelative(const Duration(seconds: 10)),
                             builder: (context, isFocused) {
                               return IconButton(
-                                iconSize: 32,
+                                iconSize: 28,
                                 icon: Icon(
                                   Icons.forward_10_rounded,
                                   color: isFocused
@@ -330,19 +338,19 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                     ),
                   ),
 
-                // Bottom Timeline & Options Toolbar
+                // Bottom Controls: Timeline Seek Bar + Time Labels + Action Pills
                 if (_isInitialized && !_hasError)
                   Positioned(
                     bottom: 0,
                     left: 0,
                     right: 0,
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(36, 24, 36, 36),
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.9),
+                            Colors.black.withValues(alpha: 0.92),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -350,35 +358,153 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Progress Bar & Duration Labels
+                          // 1. Progress Bar
                           ValueListenableBuilder(
                             valueListenable: _controller,
                             builder: (context, VideoPlayerValue value, child) {
-                              return Column(
+                              return VideoProgressIndicator(
+                                _controller,
+                                allowScrubbing: true,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                colors: const VideoProgressColors(
+                                  playedColor: RooflixTheme.primary,
+                                  bufferedColor: Colors.white30,
+                                  backgroundColor: Colors.white12,
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+
+                          // 2. Time Labels & Control Pills Row
+                          ValueListenableBuilder(
+                            valueListenable: _controller,
+                            builder: (context, VideoPlayerValue value, child) {
+                              return Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  VideoProgressIndicator(
-                                    _controller,
-                                    allowScrubbing: true,
-                                    colors: const VideoProgressColors(
-                                      playedColor: RooflixTheme.primary,
-                                      bufferedColor: Colors.white24,
-                                      backgroundColor: Colors.white12,
+                                  // Elapsed Time
+                                  Text(
+                                    _formatDuration(value.position),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
+
+                                  // Action Pills (Mute, Speed) & Total Duration
                                   Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        _formatDuration(value.position),
-                                        style: GoogleFonts.plusJakartaSans(
-                                          color: Colors.white70,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      // Mute/Unmute Option Pill
+                                      TvFocusDetector(
+                                        onSelect: _toggleMute,
+                                        builder: (context, isFocused) {
+                                          return InkWell(
+                                            onTap: _toggleMute,
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: isFocused
+                                                    ? RooflixTheme.primary
+                                                    : Colors.white
+                                                        .withValues(alpha: 0.15),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                border: Border.all(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.2),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    _isMuted
+                                                        ? Icons.volume_off_rounded
+                                                        : Icons.volume_up_rounded,
+                                                    color: Colors.white,
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    _isMuted
+                                                        ? 'Muted'
+                                                        : 'Sound On',
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       ),
+                                      const SizedBox(width: 10),
+
+                                      // Playback Speed Option Pill
+                                      TvFocusDetector(
+                                        onSelect: _cycleSpeed,
+                                        builder: (context, isFocused) {
+                                          return InkWell(
+                                            onTap: _cycleSpeed,
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: isFocused
+                                                    ? RooflixTheme.primary
+                                                    : Colors.white
+                                                        .withValues(alpha: 0.15),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                border: Border.all(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.2),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(
+                                                      Icons.speed_rounded,
+                                                      color: Colors.white,
+                                                      size: 16),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    '${_playbackSpeed}x',
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(width: 16),
+
+                                      // Total Duration
                                       Text(
                                         _formatDuration(value.duration),
                                         style: GoogleFonts.plusJakartaSans(
@@ -392,99 +518,6 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                 ],
                               );
                             },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Quick Action Pill Toolbar (Speed, Mute/Unmute)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              // Mute/Unmute Option Pill
-                              TvFocusDetector(
-                                onSelect: _toggleMute,
-                                builder: (context, isFocused) {
-                                  return InkWell(
-                                    onTap: _toggleMute,
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: isFocused
-                                            ? RooflixTheme.primary
-                                            : Colors.white.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.2),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            _isMuted
-                                                ? Icons.volume_off_rounded
-                                                : Icons.volume_up_rounded,
-                                            color: Colors.white,
-                                            size: 18,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            _isMuted ? 'Muted' : 'Sound On',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(width: 12),
-
-                              // Playback Speed Option Pill
-                              TvFocusDetector(
-                                onSelect: _cycleSpeed,
-                                builder: (context, isFocused) {
-                                  return InkWell(
-                                    onTap: _cycleSpeed,
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: isFocused
-                                            ? RooflixTheme.primary
-                                            : Colors.white.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.2),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.speed_rounded,
-                                              color: Colors.white, size: 18),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            '${_playbackSpeed}x',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
                           ),
                         ],
                       ),
