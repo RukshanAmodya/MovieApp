@@ -24,7 +24,6 @@ if sys.platform.startswith("win"):
 
 SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "rooflix-app-firebase-adminsdk-fbsvc-a93c6036a4.json")
 FIREBASE_DB_URL = "https://rooflix-app-default-rtdb.firebaseio.com"
-CS06_DOMAIN = "https://cs06.avatarzone.online"
 
 def init_firebase():
     """Initialize Firebase app once. Returns movies_ref."""
@@ -202,23 +201,26 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                     continue
         else:
             if verbose:
-                print(f"    [*] Found {len(server_options)} player options. Extracting streams...")
+                print(f"    [*] Found {len(server_options)} player option(s). Looking for CS Player...")
 
             for opt in server_options:
                 opt_text_clean = ""
                 try:
                     opt_text = await opt.inner_text()
                     opt_text_clean = opt_text.replace("\n", " ").strip()
-
-                    # Skip trailers, YouTube, and Evo Player (not cs06 domain)
                     opt_lower = opt_text_clean.lower()
-                    if "trailer" in opt_lower or "youtube" in opt_lower or "evo" in opt_lower:
+
+                    # Only click options that are CS Player type
+                    # Skip trailers, YouTube, Evo and any non-CS servers
+                    if "trailer" in opt_lower or "youtube" in opt_lower:
+                        continue
+                    if "cs" not in opt_lower:
                         if verbose:
                             print(f"    [~] Skipping non-CS player: '{opt_text_clean}'")
                         continue
 
                     if verbose:
-                        print(f"    [*] Clicking player option: '{opt_text_clean}'")
+                        print(f"    [*] Clicking CS player: '{opt_text_clean}'")
 
                     await opt.click(timeout=5000)
                     await page.wait_for_timeout(4500)
@@ -242,13 +244,17 @@ async def extract_stream_urls(page, movie_url, verbose=False):
                             except Exception:
                                 pass
 
-                            extracted_urls[opt_text_clean] = video_url
+                            extracted_urls["cs_player"] = video_url
                             if verbose:
-                                print(f"      [+] Found URL for {opt_text_clean}: {video_url}")
-                            break
+                                print(f"      [+] CS Player URL: {video_url}")
+                            break  # Got the CS player URL, stop looking
+
+                    if "cs_player" in extracted_urls:
+                        break  # No need to check remaining options
+
                 except Exception as click_err:
                     if verbose:
-                        print(f"      [-] Error clicking option '{opt_text_clean}': {click_err}")
+                        print(f"      [-] Error clicking '{opt_text_clean}': {click_err}")
 
         return extracted_urls, cover_image_url
 
@@ -265,6 +271,7 @@ async def extract_stream_urls(page, movie_url, verbose=False):
 async def main():
     parser = argparse.ArgumentParser(description="Endless movie crawler bot for cinesubz.lk → Firebase")
     parser.add_argument("-v", "--verbose", action="store_true", help="Print verbose logs")
+    parser.add_argument("--start-page", type=int, default=1, help="Start crawling from this page number (default: 1)")
     args = parser.parse_args()
 
     # Connect to Firebase
@@ -285,7 +292,7 @@ async def main():
         # Auto-close popup tabs to block ad redirects
         page.on("popup", lambda p: asyncio.create_task(p.close()))
 
-        page_num = 1
+        page_num = args.start_page
         consecutive_empty_pages = 0
 
         while True:
@@ -323,16 +330,13 @@ async def main():
                 print(f"[Page {page_num} - {idx}/{len(movie_list)}] Scraping: '{title}'")
                 urls_dict, cover_image_url = await extract_stream_urls(page, movie_url, args.verbose)
 
-                # Filter: only keep URLs from cs06.avatarzone.online
-                filtered_urls = [v for v in urls_dict.values() if v.startswith(CS06_DOMAIN)]
+                # Get the CS player URL (extracted by name match, not domain)
+                stream_url = urls_dict.get("cs_player", "")
 
-                if not filtered_urls:
-                    print(f"    [-] No cs06 stream found for '{title}'. Skipping.")
+                if not stream_url:
+                    print(f"    [-] No CS Player stream found for '{title}'. Skipping.")
                     processed_slugs.add(slug)
                     continue
-
-                # Take the first cs06 URL
-                stream_url = filtered_urls[0]
 
                 # Save to Firebase with UUID key
                 try:
