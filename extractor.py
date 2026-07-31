@@ -2,7 +2,6 @@ import asyncio
 import sys
 import os
 import re
-import uuid
 import argparse
 from playwright.async_api import async_playwright
 
@@ -70,15 +69,14 @@ def url_to_slug(movie_url: str) -> str:
 
 
 def save_to_firebase(movies_ref, slug: str, title: str, cover_url: str, stream_url: str):
-    """Write a clean movie record to Firebase with a UUID key."""
-    key = str(uuid.uuid4())
-    movies_ref.child(key).set({
+    """Write a clean movie record to Firebase using push() for time-ordered keys."""
+    result = movies_ref.push({
         "title": title,
         "cover_url": cover_url,
         "stream_url": stream_url,
         "slug": slug,
     })
-    return key
+    return result.key
 
 # ──────────────────────────────────────────────
 # Scraper Functions
