@@ -13,7 +13,7 @@ class MovieService {
   ).ref('movies');
 
   /// Returns a live stream of movies from Firebase Realtime DB.
-  /// Preserves exact Firebase push key insertion order (oldest -> newest / top -> bottom).
+  /// Newest added movies appear FIRST at the TOP of the app UI list (reversed chronological order).
   Stream<List<Movie>> moviesStream() {
     return _moviesRef.orderByKey().onValue.map((event) {
       final data = event.snapshot.value;
@@ -21,8 +21,9 @@ class MovieService {
 
       final List<Movie> movies = [];
       if (data is Map) {
-        // Firebase orderByKey() preserves exact database key order (push() order)
-        final entries = data.entries.toList();
+        // Firebase orderByKey() returns push keys chronologically (oldest -> newest).
+        // Reversing entries ensures the NEWEST added movie appears at the TOP (Index 0).
+        final entries = data.entries.toList().reversed;
         for (final entry in entries) {
           movies.add(Movie.fromMap(entry.key.toString(), entry.value));
         }
@@ -31,7 +32,7 @@ class MovieService {
     });
   }
 
-  /// Fetch movies once in exact Firebase order.
+  /// Fetch movies once (newest first at the top).
   Future<List<Movie>> fetchMoviesOnce() async {
     final snapshot = await _moviesRef.orderByKey().get();
     if (!snapshot.exists || snapshot.value == null) return [];
@@ -39,7 +40,7 @@ class MovieService {
     final data = snapshot.value;
     final List<Movie> movies = [];
     if (data is Map) {
-      final entries = data.entries.toList();
+      final entries = data.entries.toList().reversed;
       for (final entry in entries) {
         movies.add(Movie.fromMap(entry.key.toString(), entry.value));
       }
