@@ -34,10 +34,12 @@ class MoviesScreen extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.all(24),
               sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 200,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: MediaQuery.of(context).size.width >= 1600
+                      ? 260
+                      : (MediaQuery.of(context).size.width >= 960 ? 220 : 180),
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 20,
                   childAspectRatio: 0.66,
                 ),
                 delegate: SliverChildBuilderDelegate(
@@ -75,10 +77,12 @@ class _LoadingView extends StatelessWidget {
         SliverPadding(
           padding: const EdgeInsets.all(24),
           sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 200,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: MediaQuery.of(context).size.width >= 1600
+                  ? 260
+                  : (MediaQuery.of(context).size.width >= 960 ? 220 : 180),
+              mainAxisSpacing: 20,
+              crossAxisSpacing: 20,
               childAspectRatio: 0.66,
             ),
             delegate: SliverChildBuilderDelegate(

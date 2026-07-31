@@ -108,10 +108,12 @@ class HomeScreen extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
               sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 200,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: MediaQuery.of(context).size.width >= 1600
+                      ? 260
+                      : (MediaQuery.of(context).size.width >= 960 ? 220 : 180),
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 20,
                   childAspectRatio: 0.66,
                 ),
                 delegate: SliverChildBuilderDelegate(
@@ -159,7 +161,9 @@ class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final heroHeight = size.width >= 900 ? 420.0 : 240.0;
+    final heroHeight = size.width >= 1600
+        ? 480.0
+        : (size.width >= 960 ? 380.0 : 220.0);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),

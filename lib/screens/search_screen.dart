@@ -175,10 +175,12 @@ class _SearchScreenState extends State<SearchScreen> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 200,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: MediaQuery.of(context).size.width >= 1600
+                    ? 260
+                    : (MediaQuery.of(context).size.width >= 960 ? 220 : 180),
+                mainAxisSpacing: 20,
+                crossAxisSpacing: 20,
                 childAspectRatio: 0.66,
               ),
               delegate: SliverChildBuilderDelegate(
@@ -223,10 +225,12 @@ class _SearchScreenState extends State<SearchScreen> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 200,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: MediaQuery.of(context).size.width >= 1600
+                    ? 260
+                    : (MediaQuery.of(context).size.width >= 960 ? 220 : 180),
+                mainAxisSpacing: 20,
+                crossAxisSpacing: 20,
                 childAspectRatio: 0.66,
               ),
               delegate: SliverChildBuilderDelegate(
