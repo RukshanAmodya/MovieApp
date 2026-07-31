@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Watch Movies Online - RooFlix. The best place to stream movies and TV shows online. Watch today.">
+    <meta name="keywords" content="Watch Movies Online, Streaming, HD Movies, RooFlix, Cinema, Movies, Watch TV Shows">
+    <title>RooFlix — Minimal Cinematic Streaming</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --apple-bg: #F5F5F7;
+            --apple-card: #FFFFFF;
+            --apple-green: #10B981;
+            --apple-text: #1D1D1F;
+            --apple-muted: #86868B;
+            --apple-border: rgba(0,0,0,0.08);
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --sidebar-width: 260px;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--apple-bg);
+            color: var(--apple-text);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #main-sidebar {
+            width: var(--sidebar-width);
+        }
+
+        /* Custom Scrollbar */
+        #continue-sidebar-list::-webkit-scrollbar,
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        #continue-sidebar-list::-webkit-scrollbar-track,
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #continue-sidebar-list::-webkit-scrollbar-thumb,
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.08);
+            border-radius: 10px;
+        }
+
+        .glass-bottom-nav {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--apple-border);
+        }
+
+        .page-view { display: none; opacity: 0; }
+        .page-view.active { display: block; }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--apple-border);
+        }
+
+        .movie-card {
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .movie-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        }
+
+        .btn-apple {
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .btn-apple:active { transform: scale(0.96); }
+
+        .nav-active {
+            color: var(--apple-green) !important;
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .apple-input {
+            background: #FFFFFF;
+            border: 1px solid #D1D1D6;
+            transition: all 0.2s ease;
+        }
+        .apple-input:focus {
+            border-color: var(--apple-green);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+            outline: none;
+        }
+
+        #search-results-dropdown {
+            display: none;
+            position: absolute;
+            top: 110%;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(30px);
+            border-radius: 24px;
+            border: 1px solid var(--apple-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .progress-bar-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--apple-green);
+            transition: width 0.3s ease;
+        }
+
+        /* --- Player & Reviews CSS --- */
+        .video-wrapper { position: relative; background: #000; overflow: hidden; transition: all 0.3s ease; touch-action: manipulation; }
+        .video-wrapper.theater-mode { position: fixed; inset: 0; z-index: 100; max-width: 100%; max-height: 100vh; border-radius: 0; }
+        
+        /* Fade elements logic (Controls, Badges) */
+        .player-fade-element { opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 60; }
+        .video-wrapper.show-controls .player-fade-element, .video-wrapper.paused .player-fade-element { opacity: 1; pointer-events: auto; }
+
+        .custom-controls { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .control-btn { color: white; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .control-btn:hover { transform: scale(1.1); color: var(--apple-green); }
+        .seek-bar-container { width: 100%; height: 5px; background: rgba(255,255,255,0.3); border-radius: 5px; cursor: pointer; position: relative; }
+        .seek-bar-fill { height: 100%; background: var(--apple-green); border-radius: 5px; width: 0%; pointer-events: none; }
+        .watch-next-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; backdrop-filter: blur(10px); }
+        .star-rating i { cursor: pointer; color: #D1D1D6; transition: color 0.2s; }
+        .star-rating i.active { color: #F59E0B; }
+
+        /* --- Double Tap Skip Indicators CSS --- */
+        .skip-indicator { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: white; padding: 15px; border-radius: 50%; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; display: flex; align-items: center; justify-content: center; z-index: 40; }
+        .skip-indicator.show { opacity: 1; transform: translateY(-50%) scale(1.2); }
+        .skip-left { left: 10%; }
+        .skip-right { right: 10%; }
+
+        @media (max-width: 768px) {
+            #main-sidebar { display: none; }
+            main { margin-left: 0 !important; }
+            .mobile-bottom-nav { display: flex; }
+            .hide-on-mobile { display: none !important; }
+        }
+    </style>
+</head>
+<body class="selection:bg-green-100 selection:text-green-900">
+
+    <div id="app" class="flex min-h-screen">
+        
+        <aside id="main-sidebar" class="hidden md:flex glass fixed inset-y-0 left-0 z-50 flex-col p-6 border-r border-gray-200">
+            <div class="flex items-center justify-center mb-10 px-2 overflow-hidden h-12">
+                <img src="https://rooflix.rf.gd/img/rooflix-logo.png" alt="RooFlix Logo" class="h-10 w-auto object-contain">
+            </div>
+
+            <nav class="space-y-1">
+                <p class="sidebar-header-text text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">Explore</p>
+                <button onclick="router.push('home')" class="nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-900 transition-all" data-page="home">
+                    <i class="ph-bold ph-house text-xl"></i> <span class="nav-text">Home</span>
+                </button>
+                <button onclick="router.push('trending')" class="nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-900 transition-all" data-page="trending">
+                    <i class="ph-bold ph-chart-line-up text-xl"></i> <span class="nav-text">Trending</span>
+                </button>
+                <button onclick="router.push('favorites')" class="nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-900 transition-all" data-page="favorites">
+                    <i class="ph-bold ph-heart text-xl"></i> <span class="nav-text">Favorites</span>
+                </button>
+                
+                <div class="pt-6">
+                    <p class="sidebar-header-text text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">Account</p>
+                    <button onclick="router.push('settings')" class="nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-900 transition-all" data-page="settings">
+                        <i class="ph-bold ph-user-circle text-xl"></i> <span class="nav-text">Profile</span>
+                    </button>
+                    <button onclick="router.push('admin')" class="nav-btn w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-900 transition-all hidden" id="admin-sidebar-btn" data-page="admin">
+                        <i class="ph-bold ph-shield-check text-xl"></i> <span class="nav-text">Admin</span>
+                    </button>
+                </div>
+            </nav>
+
+            <div id="continue-sidebar-section" class="mt-8 hidden overflow-hidden">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-4">Continue Watching</p>
+                <div id="continue-sidebar-list" class="max-h-[140px] overflow-y-auto space-y-3 px-2 pr-2 custom-scroll">
+                </div>
+            </div>
+
+            <div class="mt-auto overflow-hidden">
+                <div id="user-footer" class="sidebar-footer-info p-4 rounded-2xl bg-gray-50 border border-gray-100 hidden"></div>
+                <button id="logout-btn" onclick="authApp.logout()" class="w-full mt-4 text-left px-3 py-3 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all hidden">
+                    <i class="ph-bold ph-sign-out text-lg mr-2"></i> <span class="nav-text">Log Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 md:ml-[260px] flex flex-col min-h-screen pb-24 md:pb-0">
+            <header class="h-20 glass sticky top-0 z-40 px-6 md:px-8 flex items-center justify-between border-b border-gray-100">
+                <div class="flex items-center gap-4 flex-1">
+                    <div class="relative group flex-1 max-w-lg">
+                        <i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="global-search" placeholder="Search for movies, actors or genres..." 
+                            class="w-full pl-12 pr-4 py-2.5 rounded-2xl border-none bg-gray-100 focus:bg-white focus:ring-2 focus:ring-green-500/20 text-sm transition-all outline-none"
+                            autocomplete="off">
+                        <div id="search-results-dropdown" class="p-4 space-y-4"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 ml-4">
+                    <!-- Join Party Button -->
+                    <button onclick="window.joinWatchParty()" class="btn-apple hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-bold bg-white text-gray-900 border border-gray-200 rounded-full shadow-sm hover:bg-gray-50">
+                        <i class="ph-bold ph-users text-lg"></i> Join Party
+                    </button>
+
+                    <div id="auth-actions" class="flex gap-2">
+                        <button onclick="router.push('auth')" class="btn-apple hidden sm:block px-5 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded-full">Sign In</button>
+                        <button onclick="router.push('auth', {tab: 'signup'})" class="btn-apple px-5 py-2 text-sm font-bold bg-green-500 text-white rounded-full shadow-lg shadow-green-500/20">Join</button>
+                    </div>
+                    <div id="user-profile-btn" class="hidden">
+                        <button onclick="router.push('settings')" class="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-200">
+                            <img id="top-avatar" src="" alt="" class="w-full h-full object-cover">
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div id="views" class="p-6 md:p-10 relative">
+                <section id="view-home" class="page-view"></section>
+                <section id="view-film" class="page-view"></section>
+                <section id="view-auth" class="page-view"></section>
+                <section id="view-settings" class="page-view"></section>
+                <section id="view-admin" class="page-view"></section>
+                <section id="view-trending" class="page-view"></section>
+                <section id="view-favorites" class="page-view"></section>
+            </div>
+        </main>
+
+        <nav class="mobile-bottom-nav md:hidden fixed bottom-6 left-6 right-6 h-16 glass-bottom-nav rounded-3xl z-50 flex items-center justify-around px-4 shadow-2xl">
+            <button onclick="router.push('home')" class="nav-btn" data-page="home"><i class="ph-bold ph-house text-2xl"></i></button>
+            <button onclick="window.joinWatchParty()" class="nav-btn"><i class="ph-bold ph-users text-2xl"></i></button>
+            <button onclick="router.push('trending')" class="nav-btn" data-page="trending"><i class="ph-bold ph-chart-line-up text-2xl"></i></button>
+            <button onclick="router.push('favorites')" class="nav-btn" data-page="favorites"><i class="ph-bold ph-heart text-2xl"></i></button>
+            <button onclick="router.push('settings')" class="nav-btn" data-page="settings"><i class="ph-bold ph-user-circle text-2xl"></i></button>
+        </nav>
+
+        <!-- Custom Modal Dialogs -->
+        <div id="custom-modal-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] hidden items-center justify-center p-4">
+            <div id="custom-modal" class="bg-white p-6 sm:p-8 rounded-[32px] w-full max-w-[90%] sm:max-w-md transform scale-95 opacity-0 transition-all shadow-2xl text-center">
+                <div id="modal-icon" class="text-5xl text-green-500 mb-4 flex justify-center"><i class="ph-fill ph-users-three"></i></div>
+                <h3 id="modal-title" class="text-2xl font-black mb-2 text-black">Title</h3>
+                <p id="modal-desc" class="text-sm text-black font-medium mb-6">Description</p>
+                <div id="modal-content" class="space-y-4"></div>
+                <div id="modal-actions" class="mt-8 flex flex-col sm:flex-row gap-3 justify-center w-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[200] glass px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 translate-y-20 opacity-0 transition-all">
+        <div id="toast-icon" class="text-green-500 text-xl"></div>
+        <p id="toast-msg" class="text-sm font-bold text-gray-700"></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, push, update, remove, get, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBnrq5anFSxRWOuJLwJ2qaSjRjVVxpRTTA",
+            authDomain: "coding-divers.firebaseapp.com",
+            databaseURL: "https://coding-divers-default-rtdb.firebaseio.com",
+            projectId: "coding-divers",
+            storageBucket: "coding-divers.appspot.com",
+            messagingSenderId: "1049168748588",
+            appId: "1:1049168748588:web:1727d999739dc32fdcf189"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        const inbuiltAvatars = [
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Jasper",
+            "https://api.dicebear.com/7.x/avataaars/svg?seed=Luna"
+        ];
+
+        let allMovies = [];
+        let userProgress = {};
+        let favs = [];
+        let isSignUp = false;
+        let initialLoad = true;
+        let currentActiveFilmId = null;
+        let progressInterval = null;
+        let watchNextTimer = null;
+        let nextMovieId = null;
+        let customPlayerInterval = null;
+
+        // Watch Party Variables
+        window.currentPartyId = null;
+        window.isPartyGuest = false;
+        let partyHostInterval = null;
+        let partyListeners = [];
+
+        // UI Helpers & Custom Modals
+        window.ui = {
+            showToast: (msg, type = 'success') => {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-msg').innerText = msg;
+                const icon = document.getElementById('toast-icon');
+                icon.innerHTML = type === 'success' ? '<i class="ph-fill ph-check-circle text-green-500"></i>' : '<i class="ph-fill ph-warning-circle text-red-500"></i>';
+                gsap.to(toast, { y: 0, opacity: 1, duration: 0.5 });
+                setTimeout(() => gsap.to(toast, { y: 20, opacity: 0, duration: 0.5 }), 3000);
+            }
+        };
+
+        window.showModal = (title, desc, contentHtml, actionsHtml) => {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerText = desc;
+            document.getElementById('modal-content').innerHTML = contentHtml;
+            document.getElementById('modal-actions').innerHTML = actionsHtml;
+            
+            const overlay = document.getElementById('custom-modal-overlay');
+            const modal = document.getElementById('custom-modal');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('scale-95', 'opacity-0');
+                modal.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        };
+
+        window.hideModal = () => {
+            const overlay = document.getElementById('custom-modal-overlay');
+            const modal = document.getElementById('custom-modal');
+            modal.classList.remove('scale-100', 'opacity-100');
+            modal.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                overlay.classList.remove('flex');
+                overlay.classList.add('hidden');
+            }, 200);
+        };
+
+        // Clipboard Helper for iframe support
+        window.copyPartyId = (id) => {
+            const el = document.createElement('textarea');
+            el.value = id;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            ui.showToast('Copied to clipboard!');
+        };
+
+        window.router = {
+            currentPage: 'home',
+            push: (page, params = {}) => {
+                // Clear all intervals & listeners on page change
+                if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
+                if (customPlayerInterval) { clearInterval(customPlayerInterval); customPlayerInterval = null; }
+                if (watchNextTimer) { clearTimeout(watchNextTimer); watchNextTimer = null; }
+                if (partyHostInterval) { clearInterval(partyHostInterval); partyHostInterval = null; }
+                if (window.idleTimer) { clearTimeout(window.idleTimer); window.idleTimer = null; }
+                
+                partyListeners.forEach(unsub => unsub());
+                partyListeners = [];
+                window.currentPartyId = null;
+                window.isPartyGuest = false;
+
+                const protectedPages = ['settings', 'favorites', 'admin'];
+                if (protectedPages.includes(page) && !auth.currentUser) {
+                    ui.showToast("Sign in required", "error");
+                    router.push('auth');
+                    return;
+                }
+                
+                router.currentPage = page;
+                document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+                const target = document.getElementById(`view-${page}`);
+                if (!target) return;
+                target.classList.add('active');
+                gsap.fromTo(target, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4 });
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    if (btn.dataset.page === page) btn.classList.add('nav-active');
+                    else btn.classList.remove('nav-active');
+                });
+                
+                if (page === 'home') renderHome();
+                if (page === 'auth') renderAuth();
+                if (page === 'settings') renderSettings();
+                if (page === 'trending' || page === 'favorites') renderGrid(page, `view-${page}`);
+                if (page === 'admin') renderAdmin();
+                if (page === 'film') {
+                    currentActiveFilmId = params.id;
+                    if (params.partyId) window.currentPartyId = params.partyId;
+                    renderFilm(params.id);
+                } else {
+                    currentActiveFilmId = null;
+                }
+                window.scrollTo(0,0);
+            }
+        };
+
+        // --- AUTH ---
+        function renderAuth() {
+            const view = document.getElementById('view-auth');
+            view.innerHTML = `
+                <div class="max-w-md mx-auto pt-10">
+                    <div class="glass p-10 rounded-[40px] shadow-2xl">
+                        <div class="text-center mb-10">
+                            <h2 class="text-3xl font-black mb-2">${isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+                            <p class="text-gray-400 text-sm">Join RooFlix for cinematic experience</p>
+                        </div>
+                        <div class="space-y-4">
+                            ${isSignUp ? `<input type="text" id="auth-name" placeholder="Full Name" class="apple-input w-full px-5 py-4 rounded-2xl">` : ''}
+                            <input type="email" id="auth-email" placeholder="Email" class="apple-input w-full px-5 py-4 rounded-2xl">
+                            <input type="password" id="auth-pass" placeholder="Password" class="apple-input w-full px-5 py-4 rounded-2xl">
+                            <button onclick="authApp.submit()" class="btn-apple w-full py-5 bg-gray-900 text-white font-black rounded-3xl shadow-xl hover:bg-black">${isSignUp ? 'Sign Up' : 'Sign In'}</button>
+                            <div class="relative py-2"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-100"></div></div><div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-300">Or</span></div></div>
+                            <button onclick="authApp.loginWithGoogle()" class="w-full py-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-3xl flex items-center justify-center gap-3 hover:bg-gray-50 transition-all shadow-sm">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66-2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/></svg>
+                                Continue with Google
+                            </button>
+                        </div>
+                        <p class="text-center mt-8 text-sm text-gray-500">${isSignUp ? 'Member?' : 'New?'} <button onclick="authApp.toggleMode()" class="text-green-500 font-black">${isSignUp ? 'Sign In' : 'Sign Up'}</button></p>
+                    </div>
+                </div>`;
+        }
+
+        window.authApp = {
+            toggleMode: () => { isSignUp = !isSignUp; renderAuth(); },
+            submit: async () => {
+                const email = document.getElementById('auth-email').value;
+                const pass = document.getElementById('auth-pass').value;
+                try {
+                    if (isSignUp) {
+                        const name = document.getElementById('auth-name').value;
+                        const res = await createUserWithEmailAndPassword(auth, email, pass);
+                        await updateProfile(res.user, { displayName: name, photoURL: inbuiltAvatars[0] });
+                    } else await signInWithEmailAndPassword(auth, email, pass);
+                    router.push('home');
+                } catch (e) { ui.showToast(e.message, 'error'); }
+            },
+            loginWithGoogle: async () => {
+                try { await signInWithPopup(auth, googleProvider); router.push('home'); } catch (e) { ui.showToast(e.message, 'error'); }
+            },
+            logout: () => signOut(auth).then(() => window.location.reload()),
+            changeAvatar: async (url) => {
+                try { await updateProfile(auth.currentUser, { photoURL: url }); ui.showToast("Avatar updated!"); renderSettings(); } catch (e) { ui.showToast(e.message, "error"); }
+            }
+        };
+
+        // --- GRID RENDERING ---
+        function renderHome() {
+            const view = document.getElementById('view-home');
+            const featured = allMovies.find(m => m.featured) || allMovies[0];
+            view.innerHTML = `
+                ${featured ? `
+                <div class="relative rounded-[40px] overflow-hidden mb-12 h-[500px] shadow-2xl group cursor-pointer" onclick="router.push('film', {id: '${featured.id}'})">
+                    <img src="${featured.horizontalImage || featured.posterUrl}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-12">
+                        <h1 class="text-5xl font-black text-white mb-4 tracking-tighter">${featured.title}</h1>
+                        <p class="text-white/60 text-lg max-w-xl mb-8 line-clamp-2">${featured.description || "No description available."}</p>
+                        <div class="flex gap-4">
+                            <button class="btn-apple px-10 py-4 bg-white text-black font-black rounded-3xl flex items-center gap-2 shadow-xl"><i class="ph-fill ph-play"></i> Watch Now</button>
+                        </div>
+                    </div>
+                </div>` : ''}
+                <div class="mb-8 flex items-center justify-between"><h2 class="text-2xl font-black tracking-tight">Latest Titles</h2></div>
+                <div id="movie-grid-home" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+            `;
+            renderGrid('home', 'movie-grid-home');
+        }
+
+        function renderGrid(type, targetId) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            let filtered = allMovies;
+            if (type === 'favorites') filtered = allMovies.filter(m => favs.includes(m.id));
+            if (type === 'trending') filtered = allMovies.filter(m => m.trending);
+            
+            const gridContent = filtered.length === 0 ? `<div class="col-span-full py-20 text-center text-gray-400 font-bold">Empty list.</div>` : 
+                filtered.map(m => {
+                    const prog = userProgress[m.id];
+                    const pct = prog && prog.duration ? Math.round((prog.lastPosition / prog.duration) * 100) : 0;
+                    return `
+                    <div onclick="router.push('film', {id: '${m.id}'})" class="movie-card relative bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100 cursor-pointer">
+                        <div class="aspect-[2/3] overflow-hidden relative">
+                            <img src="${m.posterUrl}" class="w-full h-full object-cover">
+                            ${pct > 5 && pct < 95 ? `<div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${pct}%"></div></div>` : pct >= 95 ? `<div class="absolute top-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg"><i class="ph-fill ph-check text-xs"></i></div>` : ''}
+                        </div>
+                        <div class="p-5">
+                            <div class="flex items-center justify-between mb-1"><span class="text-[9px] font-black uppercase tracking-widest text-green-500">${m.category}</span><span class="text-xs font-bold text-gray-300">${m.year}</span></div>
+                            <h3 class="font-bold text-sm truncate text-gray-800">${m.title}</h3>
+                        </div>
+                    </div>`;
+                }).join('');
+            
+            if (type === 'trending' || type === 'favorites') {
+                target.innerHTML = `<h1 class="text-4xl font-black mb-10 tracking-tighter capitalize">${type}</h1><div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">${gridContent}</div>`;
+            } else target.innerHTML = gridContent;
+        }
+
+        // --- WATCH PARTY LOGIC ---
+        window.createWatchParty = async (movieId) => {
+            if(!auth.currentUser) return ui.showToast("Please sign in to host a Watch Party", "error");
+            
+            // Generate a random 6-character party ID
+            const partyId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            try {
+                await set(ref(db, `rooflix/watch_parties/${partyId}`), {
+                    hostId: auth.currentUser.uid,
+                    movieId: movieId,
+                    createdAt: Date.now(),
+                    state: { time: 0, paused: true, updatedAt: Date.now() }
+                });
+                
+                const content = `
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border-2 border-green-500 flex items-center justify-between">
+                        <span class="text-2xl sm:text-3xl font-black tracking-widest text-green-500 select-all">${partyId}</span>
+                        <button onclick="window.copyPartyId('${partyId}')" class="text-green-500 hover:scale-110 transition-transform"><i class="ph-bold ph-copy text-2xl sm:text-3xl"></i></button>
+                    </div>
+                `;
+                const actions = `<button onclick="window.hideModal(); router.push('film', {id: '${movieId}', partyId: '${partyId}'})" class="btn-apple w-full px-8 py-4 bg-green-500 text-white font-black text-lg rounded-full shadow-lg shadow-green-500/30">Start Party</button>`;
+                
+                window.showModal("Party Created!", "Share this Party ID with your friends to watch together.", content, actions);
+            } catch(e) { ui.showToast(e.message, "error"); }
+        };
+
+        window.joinWatchParty = async () => {
+            if(!auth.currentUser) return ui.showToast("Please sign in to join a Watch Party", "error");
+            
+            const content = `<input type="text" id="join-party-id" class="w-full px-4 py-3 sm:px-5 sm:py-4 rounded-2xl text-center text-xl sm:text-2xl font-black tracking-widest uppercase border-2 border-green-500 text-green-500 placeholder-green-200 focus:outline-none focus:ring-4 focus:ring-green-500/20" placeholder="e.g. A1B2C3" maxlength="6">`;
+            const actions = `
+                <button onclick="window.hideModal()" class="w-full sm:w-1/2 px-6 py-3 sm:py-4 bg-white text-green-500 border-2 border-green-500 font-black rounded-full hover:bg-green-50 transition-colors">Cancel</button>
+                <button onclick="window.processJoinParty()" class="w-full sm:w-1/2 btn-apple px-6 py-3 sm:py-4 bg-green-500 text-white font-black rounded-full shadow-lg shadow-green-500/30">Join</button>
+            `;
+            window.showModal("Join Watch Party", "Enter the 6-character Party ID shared by your friend.", content, actions);
+        };
+
+        window.processJoinParty = async () => {
+            const pId = document.getElementById('join-party-id').value;
+            if(!pId) return;
+            const partyId = pId.toUpperCase().trim();
+            window.hideModal();
+            
+            try {
+                const snap = await get(ref(db, `rooflix/watch_parties/${partyId}`));
+                if(snap.exists()) {
+                    const data = snap.val();
+                    ui.showToast("Joining Watch Party...", "success");
+                    router.push('film', {id: data.movieId, partyId: partyId});
+                } else {
+                    ui.showToast("Party not found! Check the ID.", "error");
+                }
+            } catch(e) { ui.showToast(e.message, "error"); }
+        };
+
+        window.sendPartyMessage = () => {
+            if(!window.currentPartyId || !auth.currentUser) return;
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const u = auth.currentUser;
+            push(ref(db, `rooflix/watch_parties/${window.currentPartyId}/chat`), {
+                uid: u.uid,
+                name: u.displayName || u.email.split('@')[0],
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = '';
+        };
+
+        // --- FILM VIEW ---
+        function renderFilm(id) {
+            const m = allMovies.find(x => x.id === id);
+            if(!m) return;
+            const view = document.getElementById('view-film');
+            update(ref(db, `rooflix/movies/${id}`), { views: (m.views || 0) + 1 });
+
+            let avgRating = 0;
+            let reviewsHTML = '<p class="text-sm text-gray-500">No reviews yet.</p>';
+            if (m.reviews) {
+                const reviews = Object.values(m.reviews);
+                const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+                avgRating = (total / reviews.length).toFixed(1);
+                
+                reviewsHTML = reviews.sort((a,b) => b.timestamp - a.timestamp).map(r => `
+                    <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-3">
+                        <div class="flex items-center gap-3 mb-2">
+                            <img src="${r.userPhoto || inbuiltAvatars[0]}" class="w-8 h-8 rounded-full">
+                            <div>
+                                <p class="text-xs font-bold">${r.userName}</p>
+                                <div class="flex text-yellow-400 text-[10px]">${'<i class="ph-fill ph-star"></i>'.repeat(r.rating)}${'<i class="ph ph-star"></i>'.repeat(5-r.rating)}</div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-700">${r.text}</p>
+                    </div>
+                `).join('');
+            }
+
+            const otherMovies = allMovies.filter(x => x.id !== id);
+            const nextMovie = otherMovies.length > 0 ? otherMovies[Math.floor(Math.random() * otherMovies.length)] : null;
+            nextMovieId = nextMovie ? nextMovie.id : null;
+
+            // HTML Template for the Details Section (To keep code clean and DRY)
+            const detailsHTML = `
+                <div class="lg:col-span-2">
+                    <h1 class="text-4xl md:text-5xl font-black mb-6 tracking-tighter">${m.title}</h1>
+                    <div class="mb-10"><h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Description</h3><p class="text-gray-500 text-lg leading-relaxed">${m.description || "No description."}</p></div>
+                    
+                    <div class="flex flex-wrap gap-4 mt-4">
+                        <button onclick="toggleFav('${m.id}')" class="btn-apple px-8 py-4 bg-white border border-gray-200 rounded-3xl font-bold flex items-center gap-3 shadow-sm hover:shadow-md transition-all">
+                            <i id="fav-icon" class="${favs.includes(m.id) ? 'ph-fill ph-heart text-red-500' : 'ph ph-heart'}"></i> <span id="fav-text">${favs.includes(m.id) ? 'Saved' : 'Add to Favorites'}</span>
+                        </button>
+                        ${!window.currentPartyId ? `
+                        <button onclick="window.createWatchParty('${m.id}')" class="btn-apple px-8 py-4 bg-gray-900 text-white border border-gray-800 rounded-3xl font-bold flex items-center gap-3 shadow-sm hover:shadow-md transition-all">
+                            <i class="ph-bold ph-users text-lg"></i> Watch Party
+                        </button>` : ''}
+                    </div>
+
+                    <!-- Ratings & Reviews Section -->
+                    <div class="mt-12 pt-10 border-t border-gray-100">
+                        <h3 class="text-2xl font-black mb-6">User Reviews</h3>
+                        <div class="glass p-6 rounded-3xl mb-8 ${auth.currentUser ? '' : 'hidden'}">
+                            <p class="text-sm font-bold text-gray-700 mb-2">Write a Review</p>
+                            <div class="flex gap-1 text-2xl mb-4 star-rating" id="review-stars">
+                                <i class="ph-fill ph-star" data-val="1" onclick="window.setRating(1)"></i>
+                                <i class="ph-fill ph-star" data-val="2" onclick="window.setRating(2)"></i>
+                                <i class="ph-fill ph-star" data-val="3" onclick="window.setRating(3)"></i>
+                                <i class="ph-fill ph-star" data-val="4" onclick="window.setRating(4)"></i>
+                                <i class="ph-fill ph-star" data-val="5" onclick="window.setRating(5)"></i>
+                            </div>
+                            <textarea id="review-text" class="apple-input w-full p-4 rounded-2xl text-sm min-h-[100px] mb-4" placeholder="What do you think about this movie?"></textarea>
+                            <button onclick="window.submitReview('${m.id}')" class="btn-apple px-6 py-2 bg-gray-900 text-white font-bold rounded-2xl text-sm">Post Review</button>
+                        </div>
+                        ${!auth.currentUser ? '<p class="text-sm text-gray-500 mb-6">Please <a href="#" onclick="router.push(\'auth\')" class="text-green-500 font-bold">Sign In</a> to write a review.</p>' : ''}
+                        <div id="reviews-container">${reviewsHTML}</div>
+                    </div>
+                </div>
+                <div class="lg:col-span-1">
+                    <div class="glass p-8 rounded-[40px] shadow-sm space-y-6">
+                        <h3 class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Details</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between border-b border-gray-100 pb-3"><span class="text-sm font-bold text-gray-400">Year</span><span class="text-sm font-black text-gray-800">${m.year || 'N/A'}</span></div>
+                            <div class="flex items-center justify-between border-b border-gray-100 pb-3"><span class="text-sm font-bold text-gray-400">Rating</span><span class="text-sm font-black text-orange-500"><i class="ph-fill ph-star"></i> ${avgRating > 0 ? avgRating : (m.rating || 'N/A')}</span></div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-gray-400">Category</span><span class="text-sm font-black text-green-500 uppercase tracking-tighter">${m.category || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            view.innerHTML = `
+                <!-- Main Container (Adapts dynamically if Watch Party is active) -->
+                <div class="${window.currentPartyId ? 'flex flex-col lg:flex-row bg-[#000] rounded-2xl md:rounded-[32px] overflow-hidden shadow-2xl mb-8 border border-white/10 mx-auto max-w-[1400px]' : 'max-w-5xl mx-auto'}">
+                    
+                    <!-- Left Side: Video Section -->
+                    <div class="flex-1 min-w-0 relative ${window.currentPartyId ? 'sticky top-20 z-40 lg:static bg-black border-b border-white/10 lg:border-b-0' : ''}">
+                        <div id="video-wrapper" class="video-wrapper w-full aspect-video ${!window.currentPartyId ? 'rounded-[32px] md:rounded-[40px] shadow-2xl mb-8 border border-black/5' : ''} group" style="background-color: #000;">
+                            <video id="main-player" src="${m.videoUrl}" poster="${m.horizontalImage || ''}" class="w-full h-full object-contain" autoplay playsinline></video>
+                            
+                            <div id="skip-left-icon" class="skip-indicator skip-left"><i class="ph-bold ph-rewind text-3xl"></i></div>
+                            <div id="skip-right-icon" class="skip-indicator skip-right"><i class="ph-bold ph-fast-forward text-3xl"></i></div>
+
+                            <!-- Watch Next Overlay -->
+                            <div id="watch-next-overlay" class="watch-next-overlay hidden ${!window.currentPartyId ? 'rounded-[32px] md:rounded-[40px]' : ''}">
+                                <p class="text-gray-300 text-sm font-bold tracking-widest uppercase mb-2">Up Next</p>
+                                <h2 class="text-3xl font-black mb-6 text-white text-center px-4">${nextMovie ? nextMovie.title : ''}</h2>
+                                <div class="flex items-center gap-4">
+                                    <button onclick="window.playNextMovie()" class="btn-apple px-8 py-3 bg-white text-black font-black rounded-3xl flex items-center gap-2">
+                                        <i class="ph-fill ph-play"></i> in <span id="watch-next-countdown">10</span>s - Play Now
+                                    </button>
+                                    <button onclick="window.cancelWatchNext()" class="btn-apple px-6 py-3 bg-gray-800 text-white font-bold rounded-3xl">Cancel</button>
+                                </div>
+                            </div>
+
+                            <!-- Custom Player Controls -->
+                            <div class="custom-controls player-fade-element" id="player-controls">
+                                <div class="seek-bar-container" id="seek-bar" onclick="window.seekVideo(event)">
+                                    <div class="seek-bar-fill" id="seek-fill"></div>
+                                </div>
+                                <div class="flex items-center justify-between mt-2">
+                                    <div class="flex items-center gap-6">
+                                        <button onclick="window.togglePlay()" class="control-btn" id="play-pause-btn"><i class="ph-fill ph-pause text-2xl"></i></button>
+                                        <button onclick="window.skipVideo(-10)" class="control-btn hide-on-mobile text-sm font-bold"><i class="ph-bold ph-arrow-counter-clockwise text-xl"></i> 10s</button>
+                                        <button onclick="window.skipVideo(10)" class="control-btn hide-on-mobile text-sm font-bold">10s <i class="ph-bold ph-arrow-clockwise text-xl"></i></button>
+                                        <span id="time-display" class="text-xs font-bold font-mono text-gray-300">00:00 / 00:00</span>
+                                    </div>
+                                    <div class="flex items-center gap-6">
+                                        <button onclick="window.toggleSpeed()" class="control-btn text-sm font-bold" id="speed-btn">1x</button>
+                                        <button onclick="window.toggleTheater()" class="control-btn" title="Theater Mode"><i class="ph-bold ph-monitor-play text-xl"></i></button>
+                                        <button onclick="window.toggleFullScreen()" class="control-btn" title="Fullscreen"><i class="ph-bold ph-corners-out text-xl"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${!window.currentPartyId ? `
+                        <!-- Details inline for normal viewing -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+                            ${detailsHTML}
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Right Side / Bottom: Watch Party Sidebar UI -->
+                    ${window.currentPartyId ? `
+                    <div class="w-full lg:w-[360px] shrink-0 bg-[#0f0f0f] flex flex-col h-[400px] lg:h-auto border-l-0 lg:border-l border-white/10 relative z-30">
+                        <!-- Sidebar Header -->
+                        <div class="p-4 border-b border-white/5 flex justify-between items-center bg-[#1a1a1a]">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-500 shadow-sm">
+                                    <i class="ph-fill ph-users-three text-lg"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-black text-white text-sm">Party Chat</h3>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ID: <span class="select-all">${window.currentPartyId}</span></p>
+                                </div>
+                            </div>
+                            <button onclick="window.copyPartyId('${window.currentPartyId}')" class="text-gray-400 hover:text-green-500 transition-colors" title="Copy Party ID"><i class="ph-bold ph-copy text-xl"></i></button>
+                        </div>
+
+                        <!-- Sidebar Messages -->
+                        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col custom-scroll bg-[#0f0f0f]">
+                            <div class="text-center text-[10px] font-bold text-gray-600 my-4 uppercase tracking-widest">Welcome to the Party!</div>
+                        </div>
+
+                        <!-- Sidebar Input -->
+                        <div class="p-4 bg-[#141414] border-t border-white/5">
+                            <div class="flex items-center gap-2 bg-[#222] rounded-full p-1.5 border border-white/10 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
+                                <input type="text" id="chat-input" class="flex-1 bg-transparent text-sm px-4 outline-none text-white placeholder-gray-500" placeholder="Type a message...">
+                                <button onclick="window.sendPartyMessage()" class="w-9 h-9 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 hover:scale-105 transition-transform shadow-md shadow-green-500/30">
+                                    <i class="ph-bold ph-paper-plane-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <!-- If Watch Party is active, Details sit below the entire theater block -->
+                ${window.currentPartyId ? `
+                <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 mt-6 px-2 md:px-0">
+                    ${detailsHTML}
+                </div>
+                ` : ''}
+            `;
+            
+            const player = document.getElementById('main-player');
+            
+            // Allow user to send chat via ENTER key
+            setTimeout(() => {
+                const cInput = document.getElementById('chat-input');
+                if(cInput) {
+                    cInput.addEventListener('keypress', (e) => {
+                        if(e.key === 'Enter') window.sendPartyMessage();
+                    });
+                }
+            }, 500);
+
+            // Watch Party State Sync Logic
+            if (window.currentPartyId) {
+                const partyDbRef = ref(db, `rooflix/watch_parties/${window.currentPartyId}`);
+                get(partyDbRef).then(snap => {
+                    if(!snap.exists()) {
+                        ui.showToast("Party not found", "error");
+                        return;
+                    }
+                    const pData = snap.val();
+                    const isHost = auth.currentUser && pData.hostId === auth.currentUser.uid;
+                    
+                    if (isHost) {
+                        ui.showToast("You are the Host. You control the video.", "success");
+                        partyHostInterval = setInterval(() => {
+                            if(!player) return;
+                            update(partyDbRef, {
+                                state: { time: player.currentTime, paused: player.paused, updatedAt: Date.now() }
+                            });
+                        }, 2000);
+                    } else {
+                        window.isPartyGuest = true;
+                        ui.showToast("You joined as a Guest. Host controls playback.", "success");
+                        // Guest syncs from host
+                        const stateListener = onValue(ref(db, `rooflix/watch_parties/${window.currentPartyId}/state`), sSnap => {
+                            if(!sSnap.exists() || !player) return;
+                            const st = sSnap.val();
+                            // If difference is more than 2 seconds, sync time
+                            if (Math.abs(player.currentTime - st.time) > 2) {
+                                player.currentTime = st.time;
+                            }
+                            if (st.paused && !player.paused) player.pause();
+                            if (!st.paused && player.paused) {
+                                let playPromise = player.play();
+                                if (playPromise !== undefined) {
+                                    playPromise.catch(error => {
+                                        ui.showToast("Tap the video to sync playback", "error");
+                                    });
+                                }
+                            }
+                        });
+                        partyListeners.push(() => off(ref(db, `rooflix/watch_parties/${window.currentPartyId}/state`), 'value', stateListener));
+                    }
+
+                    // Listen for Chat messages
+                    const chatListener = onValue(ref(db, `rooflix/watch_parties/${window.currentPartyId}/chat`), cSnap => {
+                        const msgBox = document.getElementById('chat-messages');
+                        if(!msgBox) return;
+                        if(cSnap.exists()) {
+                            const msgs = Object.values(cSnap.val()).sort((a,b) => a.timestamp - b.timestamp);
+                            msgBox.innerHTML = '';
+                            msgs.forEach(msg => {
+                                const isMe = auth.currentUser && msg.uid === auth.currentUser.uid;
+                                msgBox.innerHTML += `
+                                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-3 w-full">
+                                        <span class="text-[10px] font-bold text-gray-500 mb-1 px-1">${msg.name}</span>
+                                        <div class="${isMe ? 'bg-green-500 text-white rounded-tl-xl rounded-tr-sm rounded-bl-xl rounded-br-xl' : 'bg-[#222] text-white rounded-tr-xl rounded-tl-sm rounded-br-xl rounded-bl-xl border border-white/5'} px-3.5 py-2.5 text-sm max-w-[85%] break-words shadow-sm">
+                                            ${msg.text}
+                                        </div>
+                                    </div>`;
+                            });
+                            msgBox.scrollTop = msgBox.scrollHeight;
+                        }
+                    });
+                    partyListeners.push(() => off(ref(db, `rooflix/watch_parties/${window.currentPartyId}/chat`), 'value', chatListener));
+                });
+            } else {
+                // Regular view, load normal saved progress
+                const savedPos = userProgress[id]?.lastPosition || 0;
+                player.onloadedmetadata = () => { 
+                    if(savedPos > 0 && savedPos < player.duration - 5) player.currentTime = savedPos; 
+                };
+            }
+            
+            // Custom Player Updates & Watch Next Logic
+            customPlayerInterval = setInterval(() => {
+                if(!player) return;
+                
+                // Update Time & Seek Bar
+                const timeDisplay = document.getElementById('time-display');
+                const seekFill = document.getElementById('seek-fill');
+                if(timeDisplay && seekFill && !isNaN(player.duration)) {
+                    const formatTime = (sec) => {
+                        if (isNaN(sec)) return "00:00";
+                        let h = Math.floor(sec / 3600);
+                        let m = Math.floor((sec % 3600) / 60);
+                        let s = Math.floor(sec % 60);
+                        if (h > 0) {
+                            return `${h}:${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
+                        }
+                        return `${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
+                    };
+                    timeDisplay.innerText = `${formatTime(player.currentTime)} / ${formatTime(player.duration)}`;
+                    seekFill.style.width = `${(player.currentTime / player.duration) * 100}%`;
+                }
+
+                // Watch Next Trigger (last 10 seconds) - Disable in watch party
+                if (!window.currentPartyId) {
+                    const overlay = document.getElementById('watch-next-overlay');
+                    if (player.duration > 0 && player.duration - player.currentTime <= 10 && nextMovieId) {
+                        if (overlay && overlay.classList.contains('hidden')) {
+                            overlay.classList.remove('hidden');
+                            let timeLeft = 10;
+                            document.getElementById('watch-next-countdown').innerText = timeLeft;
+                            watchNextTimer = setInterval(() => {
+                                timeLeft--;
+                                const cd = document.getElementById('watch-next-countdown');
+                                if(cd) cd.innerText = timeLeft;
+                                if(timeLeft <= 0) {
+                                    clearInterval(watchNextTimer);
+                                    window.playNextMovie();
+                                }
+                            }, 1000);
+                        }
+                    }
+                }
+            }, 1000);
+
+            if (!window.currentPartyId) {
+                progressInterval = setInterval(() => { if (auth.currentUser && player && !player.paused) saveProgress(id, player.currentTime, player.duration); }, 5000);
+            }
+
+            const wrapper = document.getElementById('video-wrapper');
+            
+            // --- Auto Hide Controls Logic (10s) ---
+            window.idleTimer = null;
+            window.resetIdleTimer = () => {
+                if(!wrapper) return;
+                wrapper.classList.add('show-controls');
+                clearTimeout(window.idleTimer);
+                window.idleTimer = setTimeout(() => {
+                    if (player && !player.paused) {
+                        wrapper.classList.remove('show-controls');
+                    }
+                }, 10000); // Hide after 10 seconds of inactivity
+            };
+
+            player.onplay = () => {
+                document.getElementById('play-pause-btn').innerHTML = '<i class="ph-fill ph-pause text-2xl"></i>';
+                wrapper.classList.remove('paused');
+                window.resetIdleTimer();
+            };
+            player.onpause = () => {
+                document.getElementById('play-pause-btn').innerHTML = '<i class="ph-fill ph-play text-2xl"></i>';
+                wrapper.classList.add('paused');
+                wrapper.classList.add('show-controls'); // Always show when paused
+                clearTimeout(window.idleTimer);
+            };
+            
+            // --- Single Tap (Play/Pause) & Double Tap (Skip) Logic ---
+            let tapTimer = null;
+            let lastClickTime = 0;
+
+            wrapper.addEventListener('click', (e) => {
+                // Ignore clicks on controls or overlays
+                if (e.target.closest('.custom-controls') || e.target.closest('#watch-next-overlay') || e.target.closest('.watch-party-chat') || e.target.closest('.party-badge')) {
+                    return; 
+                }
+
+                const now = Date.now();
+                const timeDiff = now - lastClickTime;
+                const rect = wrapper.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+
+                if (timeDiff < 300 && timeDiff > 0) {
+                    // Double Click/Tap detected
+                    clearTimeout(tapTimer);
+                    if (window.isPartyGuest) {
+                        ui.showToast("Host controls playback", "error");
+                    } else {
+                        if (clickX < rect.width / 2) {
+                            window.skipVideo(-10);
+                            const indicator = document.getElementById('skip-left-icon');
+                            if(indicator) { indicator.classList.add('show'); setTimeout(() => indicator.classList.remove('show'), 400); }
+                        } else {
+                            window.skipVideo(10);
+                            const indicator = document.getElementById('skip-right-icon');
+                            if(indicator) { indicator.classList.add('show'); setTimeout(() => indicator.classList.remove('show'), 400); }
+                        }
+                    }
+                    lastClickTime = 0; // Reset
+                } else {
+                    // Single Click/Tap detected
+                    lastClickTime = now;
+                    tapTimer = setTimeout(() => {
+                        window.togglePlay();
+                    }, 300);
+                }
+                
+                window.resetIdleTimer();
+            });
+
+            wrapper.addEventListener('mousemove', window.resetIdleTimer);
+            wrapper.addEventListener('touchstart', window.resetIdleTimer, {passive: true});
+            
+            // Initialize controls as visible, starting the 10s countdown
+            window.resetIdleTimer();
+
+            // Default star rating setup
+            window.currentRatingValue = 0;
+            if (document.getElementById('review-stars')) {
+                window.setRating(5);
+            }
+        }
+
+        async function saveProgress(movieId, pos, duration) {
+            if (!auth.currentUser) return;
+            set(ref(db, `rooflix/users/${auth.currentUser.uid}/progress/${movieId}`), { lastPosition: pos, duration, updatedAt: Date.now() });
+        }
+
+        // --- FAVORITES SYNC LOGIC ---
+        window.toggleFav = async (id) => {
+            if (!auth.currentUser) { ui.showToast("Sign in first!", "error"); return; }
+            const uid = auth.currentUser.uid;
+            const isFav = favs.includes(id);
+            try {
+                if (isFav) await remove(ref(db, `rooflix/users/${uid}/favorites/${id}`));
+                else await set(ref(db, `rooflix/users/${uid}/favorites/${id}`), Date.now());
+                ui.showToast(isFav ? "Removed" : "Added");
+            } catch (e) { ui.showToast(e.message, "error"); }
+        };
+
+        // --- SETTINGS / HISTORY ---
+        function renderSettings() {
+            const u = auth.currentUser; if(!u) return;
+            const view = document.getElementById('view-settings');
+            const historyItems = Object.entries(userProgress).map(([id, val]) => {
+                const m = allMovies.find(x => x.id === id); if (!m) return null;
+                const pct = Math.round((val.lastPosition / val.duration) * 100);
+                return { ...m, ...val, pct };
+            }).filter(i => i !== null).sort((a,b) => b.updatedAt - a.updatedAt);
+
+            view.innerHTML = `
+                <div class="max-w-6xl mx-auto space-y-12 pb-20">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                        <div class="lg:col-span-1"><div class="glass p-8 rounded-[40px] text-center"><img src="${u.photoURL || inbuiltAvatars[0]}" class="w-32 h-32 rounded-3xl mx-auto mb-6 shadow-xl border-4 border-white object-cover"><h3 class="font-black text-xl">${u.displayName || 'User'}</h3><p class="text-sm text-gray-400 mb-6">${u.email}</p><button onclick="authApp.logout()" class="text-red-500 text-xs font-black uppercase tracking-widest">Sign Out</button></div></div>
+                        <div class="lg:col-span-2"><div class="bg-white p-10 rounded-[40px] shadow-sm"><h2 class="text-lg font-black mb-6">Avatars</h2><div class="grid grid-cols-5 gap-4">${inbuiltAvatars.map(url => `<div onclick="authApp.changeAvatar('${url}')" class="avatar-option rounded-2xl overflow-hidden cursor-pointer border-2 ${u.photoURL === url ? 'border-green-500' : 'border-transparent'}"><img src="${url}"></div>`).join('')}</div></div></div>
+                    </div>
+                    <div id="watch-history-section"><h2 class="text-2xl font-black mb-8 tracking-tight">Watch History</h2><div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">${historyItems.map(m => `
+                        <div onclick="router.push('film', {id: '${m.id}'})" class="movie-card bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100 cursor-pointer">
+                            <div class="aspect-[2/3] relative"><img src="${m.posterUrl}" class="w-full h-full object-cover">${m.pct >= 95 ? `<div class="absolute inset-0 bg-black/40 flex items-center justify-center"><span class="px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-full">Completed</span></div>` : `<div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${m.pct}%"></div></div>`}</div>
+                            <div class="p-5"><h3 class="font-bold text-sm truncate">${m.title}</h3><p class="text-[10px] font-bold text-gray-400 mt-1">${m.pct}% watched</p></div>
+                        </div>`).join('')}</div></div>
+                </div>`;
+        }
+
+        // --- DATA OBSERVERS ---
+        onAuthStateChanged(auth, u => {
+            document.getElementById('auth-actions').classList.toggle('hidden', !!u);
+            document.getElementById('user-profile-btn').classList.toggle('hidden', !u);
+            document.getElementById('logout-btn').classList.toggle('hidden', !u);
+            document.getElementById('user-footer').classList.toggle('hidden', !!u === false);
+            if (u) {
+                document.getElementById('top-avatar').src = u.photoURL || inbuiltAvatars[0];
+                document.getElementById('user-footer').innerHTML = `<div class="flex items-center gap-3"><img src="${u.photoURL || inbuiltAvatars[0]}" class="w-10 h-10 rounded-2xl shadow-sm"><div class="min-w-0"><p class="text-xs font-black truncate">${u.displayName || u.email.split('@')[0]}</p><p class="text-[9px] font-bold text-green-500 uppercase">Premium</p></div></div>`;
+                if (u.email === 'admin@rooflix.com') document.getElementById('admin-sidebar-btn').classList.remove('hidden');
+                onValue(ref(db, `rooflix/users/${u.uid}/progress`), snap => { userProgress = snap.val() || {}; renderContinueWatching(); if(router.currentPage === 'home') renderHome(); if(router.currentPage === 'settings') renderSettings(); });
+                
+                onValue(ref(db, `rooflix/users/${u.uid}/favorites`), snap => {
+                    favs = snap.val() ? Object.keys(snap.val()) : [];
+                    if (router.currentPage === 'favorites') renderGrid('favorites', 'view-favorites');
+                    if (router.currentPage === 'film') {
+                        const icon = document.getElementById('fav-icon');
+                        if(icon) icon.className = favs.includes(currentActiveFilmId) ? 'ph-fill ph-heart text-red-500' : 'ph ph-heart';
+                    }
+                });
+            }
+        });
+
+        function renderContinueWatching() {
+            const list = document.getElementById('continue-sidebar-list');
+            const progressItems = Object.entries(userProgress).map(([id, val]) => ({ id, ...val })).filter(p => (p.lastPosition / p.duration) < 0.95).sort((a,b) => b.updatedAt - a.updatedAt).slice(0, 10);
+            if (progressItems.length === 0) { document.getElementById('continue-sidebar-section').classList.add('hidden'); return; }
+            document.getElementById('continue-sidebar-section').classList.remove('hidden');
+            list.innerHTML = progressItems.map(p => {
+                const m = allMovies.find(x => x.id === p.id); if (!m) return '';
+                const pct = Math.round((p.lastPosition / p.duration) * 100);
+                return `<div onclick="router.push('film', {id: '${m.id}'})" class="group cursor-pointer mb-3"><div class="flex items-center gap-3 mb-1"><img src="${m.posterUrl}" class="w-8 h-10 rounded-lg object-cover shadow-sm"><div class="min-w-0 flex-1"><p class="text-[11px] font-bold text-gray-700 truncate">${m.title}</p><p class="text-[9px] font-bold text-gray-400">${pct}%</p></div></div><div class="h-1 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-green-500" style="width: ${pct}%"></div></div></div>`;
+            }).join('');
+        }
+
+        onValue(ref(db, 'rooflix/movies'), snap => {
+            allMovies = snap.val() ? Object.entries(snap.val()).map(([id, val]) => ({ id, ...val })) : [];
+            if (initialLoad) { router.push('home'); initialLoad = false; }
+            else { if (router.currentPage === 'home') renderHome(); if (router.currentPage === 'settings') renderSettings(); renderContinueWatching(); }
+        });
+        
+        // --- SEARCH ---
+        const searchInput = document.getElementById('global-search');
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const dropdown = document.getElementById('search-results-dropdown');
+            if (query.length === 0) { dropdown.style.display = 'none'; return; }
+            const results = allMovies.filter(m => m.title.toLowerCase().includes(query)).slice(0, 6);
+            dropdown.style.display = 'block';
+            dropdown.innerHTML = results.length === 0 ? '<p class="p-4 text-center text-gray-400">No matches.</p>' : results.map(m => `<div onclick="router.push('film', {id: '${m.id}'}); document.getElementById('search-results-dropdown').style.display='none';" class="flex items-center gap-4 p-2 rounded-2xl cursor-pointer hover:bg-gray-50"><img src="${m.posterUrl}" class="w-10 h-14 rounded-lg object-cover shadow-sm"><div class="min-w-0"><p class="font-bold text-sm truncate">${m.title}</p><p class="text-[10px] font-black text-green-500">${m.category}</p></div></div>`).join('');
+        });
+
+        // --- PLAYER CONTROLS LOGIC ---
+        window.togglePlay = () => {
+            if (window.isPartyGuest) return ui.showToast("Host controls playback", "error");
+            const player = document.getElementById('main-player');
+            if (player.paused) player.play(); else player.pause();
+        };
+
+        window.skipVideo = (seconds) => {
+            if (window.isPartyGuest) return ui.showToast("Host controls playback", "error");
+            const player = document.getElementById('main-player');
+            player.currentTime += seconds;
+        };
+
+        window.seekVideo = (e) => {
+            if (window.isPartyGuest) return ui.showToast("Host controls playback", "error");
+            const player = document.getElementById('main-player');
+            const bar = document.getElementById('seek-bar');
+            const rect = bar.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            player.currentTime = pos * player.duration;
+        };
+
+        const speeds = [1, 1.25, 1.5, 2, 0.5];
+        let currentSpeedIdx = 0;
+        window.toggleSpeed = () => {
+            currentSpeedIdx = (currentSpeedIdx + 1) % speeds.length;
+            const player = document.getElementById('main-player');
+            player.playbackRate = speeds[currentSpeedIdx];
+            document.getElementById('speed-btn').innerText = speeds[currentSpeedIdx] + 'x';
+        };
+
+        window.toggleTheater = () => {
+            const wrapper = document.getElementById('video-wrapper');
+            wrapper.classList.toggle('theater-mode');
+            if(wrapper.classList.contains('theater-mode')) {
+                document.body.style.overflow = 'hidden';
+                window.scrollTo(0,0);
+            } else {
+                document.body.style.overflow = '';
+            }
+        };
+
+        window.toggleFullScreen = () => {
+            const wrapper = document.getElementById('video-wrapper');
+            if (!document.fullscreenElement) {
+                wrapper.requestFullscreen().catch(err => console.log(err));
+            } else {
+                document.exitFullscreen();
+            }
+        };
+
+        window.cancelWatchNext = () => {
+            clearInterval(watchNextTimer);
+            document.getElementById('watch-next-overlay').classList.add('hidden');
+        };
+
+        window.playNextMovie = () => {
+            clearInterval(watchNextTimer);
+            if (nextMovieId) router.push('film', { id: nextMovieId });
+        };
+
+        window.setRating = (val) => {
+            window.currentRatingValue = val;
+            const stars = document.getElementById('review-stars').children;
+            for(let i=0; i<5; i++) {
+                if(i < val) {
+                    stars[i].classList.add('active');
+                    stars[i].classList.remove('text-gray-300');
+                } else {
+                    stars[i].classList.remove('active');
+                    stars[i].classList.add('text-gray-300');
+                }
+            }
+        };
+
+        window.submitReview = async (movieId) => {
+            const text = document.getElementById('review-text').value.trim();
+            if (!text) return ui.showToast('Please enter a review.', 'error');
+            const u = auth.currentUser;
+            if (!u) return;
+
+            const reviewData = {
+                uid: u.uid,
+                userName: u.displayName || u.email.split('@')[0],
+                userPhoto: u.photoURL || inbuiltAvatars[0],
+                rating: window.currentRatingValue,
+                text: text,
+                timestamp: Date.now()
+            };
+
+            try {
+                await set(ref(db, `rooflix/movies/${movieId}/reviews/${u.uid}`), reviewData);
+                ui.showToast('Review Added successfully!');
+                renderFilm(movieId); // Refresh view
+            } catch (e) {
+                ui.showToast(e.message, 'error');
+            }
+        };
+
+        // --- Keyboard Shortcuts ---
+        document.addEventListener('keydown', (e) => {
+            const viewFilm = document.getElementById('view-film');
+            if (!viewFilm || !viewFilm.classList.contains('active')) return;
+            
+            const activeTag = document.activeElement.tagName;
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+            const player = document.getElementById('main-player');
+            if (!player) return;
+
+            switch(e.key.toLowerCase()) {
+                case ' ':
+                case 'k':
+                    e.preventDefault();
+                    window.togglePlay();
+                    break;
+                case 'arrowleft':
+                case 'j':
+                    e.preventDefault();
+                    window.skipVideo(-10);
+                    break;
+                case 'arrowright':
+                case 'l':
+                    e.preventDefault();
+                    window.skipVideo(10);
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    player.muted = !player.muted;
+                    ui.showToast(player.muted ? 'Muted' : 'Unmuted');
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    window.toggleFullScreen();
+                    break;
+            }
+        });
+
+    </script>
+</body>
+</html>

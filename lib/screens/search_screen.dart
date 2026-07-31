@@ -44,8 +44,7 @@ class _SearchScreenState extends State<SearchScreen> {
       } else {
         _results = _allMovies
             .where((m) =>
-                m.title.toLowerCase().contains(query) ||
-                m.slug.toLowerCase().contains(query))
+                m.title.toLowerCase().contains(query))
             .toList();
       }
     });

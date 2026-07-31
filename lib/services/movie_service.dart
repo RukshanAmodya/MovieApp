@@ -12,50 +12,38 @@ class MovieService {
     databaseURL: 'https://rooflix-app-default-rtdb.firebaseio.com',
   ).ref('movies');
 
-  /// Returns a live stream of all movies from Firebase Realtime DB.
+  /// Returns a live stream of movies from Firebase Realtime DB.
+  /// Preserves exact Firebase push key insertion order (oldest -> newest / top -> bottom).
   Stream<List<Movie>> moviesStream() {
-    return _moviesRef.onValue.map((event) {
+    return _moviesRef.orderByKey().onValue.map((event) {
       final data = event.snapshot.value;
       if (data == null) return <Movie>[];
 
       final List<Movie> movies = [];
       if (data is Map) {
-        data.forEach((key, value) {
-          movies.add(Movie.fromMap(key.toString(), value));
-        });
-      } else if (data is List) {
-        for (int i = 0; i < data.length; i++) {
-          if (data[i] != null) {
-            movies.add(Movie.fromMap(i.toString(), data[i]));
-          }
+        // Firebase orderByKey() preserves exact database key order (push() order)
+        final entries = data.entries.toList();
+        for (final entry in entries) {
+          movies.add(Movie.fromMap(entry.key.toString(), entry.value));
         }
       }
-
-      // Sort alphabetically by title
-      movies.sort((a, b) => a.title.compareTo(b.title));
       return movies;
     });
   }
 
-  /// Fetch movies once (no live updates).
+  /// Fetch movies once in exact Firebase order.
   Future<List<Movie>> fetchMoviesOnce() async {
-    final snapshot = await _moviesRef.get();
+    final snapshot = await _moviesRef.orderByKey().get();
     if (!snapshot.exists || snapshot.value == null) return [];
 
     final data = snapshot.value;
     final List<Movie> movies = [];
     if (data is Map) {
-      data.forEach((key, value) {
-        movies.add(Movie.fromMap(key.toString(), value));
-      });
-    } else if (data is List) {
-      for (int i = 0; i < data.length; i++) {
-        if (data[i] != null) {
-          movies.add(Movie.fromMap(i.toString(), data[i]));
-        }
+      final entries = data.entries.toList();
+      for (final entry in entries) {
+        movies.add(Movie.fromMap(entry.key.toString(), entry.value));
       }
     }
-    movies.sort((a, b) => a.title.compareTo(b.title));
     return movies;
   }
 }
