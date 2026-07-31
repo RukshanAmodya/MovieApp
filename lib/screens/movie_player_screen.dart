@@ -266,9 +266,9 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(36, 20, 36, 36),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.transparent, Colors.black90],
+                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.9)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
