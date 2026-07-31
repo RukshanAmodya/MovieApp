@@ -25,57 +25,53 @@ SERVICE_ACCOUNT_PATH = os.path.join(os.path.dirname(__file__), "rooflix-app-fire
 FIREBASE_DB_URL = "https://rooflix-app-default-rtdb.firebaseio.com"
 
 def init_firebase():
-    """Initialize Firebase app once. Returns movies_ref."""
+    """Initialize Firebase app once. Returns (movies_ref, index_ref)."""
     if not firebase_admin._apps:
         cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
         firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_DB_URL})
-    movies_ref = db.reference("movies")
-    # Clean up old _processed node if it exists (one-time migration)
-    try:
-        db.reference("_processed").delete()
-    except Exception:
-        pass
-    return movies_ref
+    # Clean up legacy nodes if they exist
+    for legacy in ("_processed",):
+        try:
+            db.reference(legacy).delete()
+        except Exception:
+            pass
+    return db.reference("movies"), db.reference("_index")
 
 
-def load_processed_slugs(movies_ref) -> set:
-    """
-    Read slug fields from existing movies in Firebase for deduplication.
-    The slug (e.g. 'aval-2026-sinhala-subtitles') is derived from the movie URL.
-    """
-    print("[*] Loading existing slugs from Firebase for deduplication...")
+def load_processed_slugs(index_ref) -> set:
+    """Load already-scraped slugs from the _index node for dedup."""
+    print("[*] Loading processed slugs from Firebase...")
     try:
-        snapshot = movies_ref.get()
+        snapshot = index_ref.get()
         if not snapshot:
-            print("[*] Firebase movies is empty. Starting fresh.")
+            print("[*] No existing data. Starting fresh.")
             return set()
-        slugs = set()
-        for data in snapshot.values():
-            if isinstance(data, dict) and "slug" in data:
-                slugs.add(data["slug"])
-        print(f"[+] Found {len(slugs)} already-saved movie(s) in Firebase.")
+        slugs = set(snapshot.keys())
+        print(f"[+] Found {len(slugs)} already-processed movie(s).")
         return slugs
     except Exception as e:
-        print(f"[!] Warning: could not read Firebase movies: {e}")
+        print(f"[!] Warning: could not read _index: {e}")
         return set()
 
 
 def url_to_slug(movie_url: str) -> str:
-    """Extract the clean slug from a movie URL.
+    """Extract slug from movie URL.
     e.g. https://cinesubz.lk/movies/aval-2026-sinhala-subtitles/ → aval-2026-sinhala-subtitles
     """
     match = re.search(r"/movies/([^/]+)/?$", movie_url)
     return match.group(1) if match else movie_url.rstrip("/").split("/")[-1]
 
 
-def save_to_firebase(movies_ref, slug: str, title: str, cover_url: str, stream_url: str):
-    """Write a clean movie record to Firebase using push() for time-ordered keys."""
+def save_to_firebase(movies_ref, index_ref, slug: str,
+                     title: str, cover_url: str, stream_url: str):
+    """Push clean movie data and mark slug in _index for dedup."""
     result = movies_ref.push({
         "title": title,
         "cover_url": cover_url,
         "stream_url": stream_url,
-        "slug": slug,
     })
+    # Mark as done in _index (bot-internal, not shown to app)
+    index_ref.child(slug).set(True)
     return result.key
 
 # ──────────────────────────────────────────────
@@ -274,11 +270,11 @@ async def main():
 
     # Connect to Firebase
     print("[*] Connecting to Firebase Realtime Database...")
-    movies_ref = init_firebase()
+    movies_ref, index_ref = init_firebase()
     print(f"[+] Connected: {FIREBASE_DB_URL}/movies")
 
-    # Load already-saved slugs to skip duplicates on resume
-    processed_slugs = load_processed_slugs(movies_ref)
+    # Load already-processed slugs for dedup
+    processed_slugs = load_processed_slugs(index_ref)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -336,10 +332,10 @@ async def main():
                     processed_slugs.add(slug)
                     continue
 
-                # Save to Firebase with UUID key
+                # Save to Firebase
                 try:
                     saved_key = save_to_firebase(
-                        movies_ref,
+                        movies_ref, index_ref,
                         slug=slug,
                         title=title,
                         cover_url=cover_image_url,
