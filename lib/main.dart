@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'core/theme.dart';
+import 'services/api_service.dart';
 import 'widgets/app_shell.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiService.init();
   runApp(const RooflixApp());
 }
 
