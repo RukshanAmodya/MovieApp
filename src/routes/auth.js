@@ -19,8 +19,14 @@ function getApiKey(env) {
  * Returns: { idToken, email, uid, expiresIn }
  */
 async function signup(request, env) {
-  const body = await request.json();
-  const { email, password } = body;
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: 'Invalid JSON payload' }, 400);
+  }
+
+  const { email, password } = body ?? {};
 
   if (!email || !password) {
     return jsonResponse({ error: 'Email and password are required' }, 400);
@@ -56,8 +62,14 @@ async function signup(request, env) {
  * Returns: { idToken, email, uid, expiresIn }
  */
 async function signin(request, env) {
-  const body = await request.json();
-  const { email, password } = body;
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: 'Invalid JSON payload' }, 400);
+  }
+
+  const { email, password } = body ?? {};
 
   if (!email || !password) {
     return jsonResponse({ error: 'Email and password are required' }, 400);
@@ -89,7 +101,6 @@ async function signin(request, env) {
 
 /**
  * POST /auth/signout
- * (Client-side token deletion — no server action needed for Firebase)
  */
 async function signout() {
   return jsonResponse({ message: 'Signed out successfully' }, 200);
@@ -103,9 +114,9 @@ export async function handleAuth(request, env, path) {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
-  if (path === '/auth/signup')  return await signup(request, env);
-  if (path === '/auth/signin')  return await signin(request, env);
-  if (path === '/auth/signout') return await signout();
+  if (path === '/auth/signup' || path === '/auth/signup/')  return await signup(request, env);
+  if (path === '/auth/signin' || path === '/auth/signin/')  return await signin(request, env);
+  if (path === '/auth/signout' || path === '/auth/signout/') return await signout();
 
   return jsonResponse({ error: 'Auth route not found' }, 404);
 }
@@ -121,13 +132,22 @@ function jsonResponse(data, status = 200) {
 
 function firebaseAuthError(code) {
   switch (code) {
-    case 'EMAIL_EXISTS':           return 'This email is already registered.';
-    case 'INVALID_PASSWORD':       return 'Incorrect password.';
-    case 'EMAIL_NOT_FOUND':        return 'No account found with this email.';
-    case 'USER_DISABLED':          return 'This account has been disabled.';
-    case 'TOO_MANY_ATTEMPTS_TRY_LATER': return 'Too many attempts. Please try again later.';
-    case 'WEAK_PASSWORD : Password should be at least 6 characters':
-                                   return 'Password must be at least 6 characters.';
-    default:                       return code ?? 'Authentication failed.';
+    case 'EMAIL_EXISTS':
+      return 'This email is already registered.';
+    case 'INVALID_PASSWORD':
+      return 'Incorrect password.';
+    case 'INVALID_EMAIL':
+      return 'Please enter a valid email address.';
+    case 'EMAIL_NOT_FOUND':
+      return 'No account found with this email.';
+    case 'USER_DISABLED':
+      return 'This account has been disabled.';
+    case 'TOO_MANY_ATTEMPTS_TRY_LATER':
+      return 'Too many attempts. Please try again later.';
+    default:
+      if (code && code.includes('WEAK_PASSWORD')) {
+        return 'Password must be at least 6 characters.';
+      }
+      return code ?? 'Authentication failed.';
   }
 }

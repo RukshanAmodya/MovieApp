@@ -20,13 +20,14 @@ export default {
     }
 
     const url = new URL(request.url);
-    const path = url.pathname;
+    // Normalize path by removing trailing slash if any
+    const path = url.pathname.length > 1 ? url.pathname.replace(/\/$/, '') : url.pathname;
 
     try {
       let response;
 
       // ----------- AUTH ROUTES -----------
-      if (path.startsWith('/auth/')) {
+      if (path.startsWith('/auth')) {
         response = await handleAuth(request, env, path);
 
       // ----------- MOVIES ROUTES -----------
@@ -47,20 +48,18 @@ export default {
         );
       }
 
-      // Attach CORS headers to every response
-      const newHeaders = new Headers(response.headers);
-      Object.entries(CORS_HEADERS).forEach(([k, v]) => newHeaders.set(k, v));
-      return new Response(response.body, {
-        status: response.status,
-        headers: newHeaders,
-      });
+      // Attach CORS headers directly to response object (preserves stream body)
+      Object.entries(CORS_HEADERS).forEach(([k, v]) => response.headers.set(k, v));
+      return response;
 
     } catch (err) {
       console.error('Worker error:', err);
-      return new Response(
+      const errResponse = new Response(
         JSON.stringify({ error: 'Internal server error', details: err.message }),
-        { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
+      Object.entries(CORS_HEADERS).forEach(([k, v]) => errResponse.headers.set(k, v));
+      return errResponse;
     }
   },
 };
