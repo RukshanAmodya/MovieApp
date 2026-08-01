@@ -65,7 +65,7 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero Billboard Section
+              // Hero Billboard
               _NetflixHeroBillboard(
                 movie: heroMovie,
                 onPlay: () {
@@ -77,26 +77,26 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Category Row 1: Trending Now
               _NetflixMovieRow(
-                title: filterTrending ? 'Trending Now' : 'Trending Now',
+                title: 'Trending Now',
                 movies: trendingMovies.isEmpty ? movies : trendingMovies,
+                rowIndex: 0,
               ),
 
               const SizedBox(height: 24),
 
-              // Category Row 2: Popular Movies
               _NetflixMovieRow(
                 title: 'Popular on RooFlix',
                 movies: popularMovies.isEmpty ? movies : popularMovies,
+                rowIndex: 1,
               ),
 
               const SizedBox(height: 24),
 
-              // Category Row 3: New Releases
               _NetflixMovieRow(
                 title: 'Recently Added',
                 movies: recentMovies.isEmpty ? movies : recentMovies,
+                rowIndex: 2,
               ),
 
               const SizedBox(height: 40),
@@ -119,7 +119,7 @@ class HomeScreen extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Netflix Hero Billboard (Hero Section)
+// Hero Billboard
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _NetflixHeroBillboard extends StatelessWidget {
@@ -141,7 +141,7 @@ class _NetflixHeroBillboard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Background Backdrop Image
+          // Background Image
           if (movie.coverUrl.isNotEmpty)
             CachedNetworkImage(
               imageUrl: movie.coverUrl,
@@ -153,7 +153,7 @@ class _NetflixHeroBillboard extends StatelessWidget {
           else
             Container(color: RooflixTheme.surfaceSecondary),
 
-          // Left Gradient Vignette
+          // Left Gradient
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -170,7 +170,7 @@ class _NetflixHeroBillboard extends StatelessWidget {
             ),
           ),
 
-          // Bottom Gradient Vignette
+          // Bottom Gradient
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -186,7 +186,7 @@ class _NetflixHeroBillboard extends StatelessWidget {
             ),
           ),
 
-          // Content Info Overlay
+          // Content Overlay
           Positioned(
             left: 40,
             bottom: 30,
@@ -195,7 +195,7 @@ class _NetflixHeroBillboard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // N ORIGINAL Badge
+                // Badge
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -230,7 +230,7 @@ class _NetflixHeroBillboard extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                // Movie Title
+                // Title
                 Text(
                   movie.title,
                   maxLines: 2,
@@ -251,7 +251,7 @@ class _NetflixHeroBillboard extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                // Metadata Badges (4K, 5.1, Year)
+                // Metadata
                 Row(
                   children: [
                     _MetaBadge('2026'),
@@ -282,16 +282,16 @@ class _NetflixHeroBillboard extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Action Buttons (Play & Info)
+                // Action Buttons
                 Row(
                   children: [
-                    // Play Button
+                    // Play Button — Left arrow goes to sidebar
                     Focus(
                       onKeyEvent: (node, event) {
                         if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                            FocusScope.of(context)
-                                .focusInDirection(TraversalDirection.left);
+                          if (event.logicalKey ==
+                              LogicalKeyboardKey.arrowLeft) {
+                            sidebarScope.requestFocus();
                             return KeyEventResult.handled;
                           }
                         }
@@ -426,17 +426,94 @@ class _MetaBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Netflix Horizontal Movie Row (Horizontal Scrollable Carousel for D-Pad)
+// Netflix Horizontal Movie Row — D-Pad aware with explicit focus management
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _NetflixMovieRow extends StatelessWidget {
+class _NetflixMovieRow extends StatefulWidget {
   final String title;
   final List<Movie> movies;
+  final int rowIndex;
 
   const _NetflixMovieRow({
     required this.title,
     required this.movies,
+    required this.rowIndex,
   });
+
+  @override
+  State<_NetflixMovieRow> createState() => _NetflixMovieRowState();
+}
+
+class _NetflixMovieRowState extends State<_NetflixMovieRow> {
+  final ScrollController _scrollController = ScrollController();
+
+  // One FocusNode per card in this row
+  final List<FocusNode> _focusNodes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _buildFocusNodes();
+  }
+
+  @override
+  void didUpdateWidget(_NetflixMovieRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.movies.length != widget.movies.length) {
+      _disposeFocusNodes();
+      _buildFocusNodes();
+    }
+  }
+
+  void _buildFocusNodes() {
+    _focusNodes.clear();
+    for (int i = 0; i < widget.movies.length; i++) {
+      final node = FocusNode(debugLabel: 'row${widget.rowIndex}_card$i');
+      node.addListener(() {
+        if (node.hasFocus) {
+          _scrollCardIntoView(i);
+        }
+      });
+      _focusNodes.add(node);
+    }
+  }
+
+  void _disposeFocusNodes() {
+    for (final node in _focusNodes) {
+      node.dispose();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeFocusNodes();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Smoothly scroll the card at [index] into the center of the viewport
+  void _scrollCardIntoView(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      // Each card is roughly 150+16 = 166 px wide; padding left 40
+      const cardWidth = 150.0 + 16.0;
+      const paddingLeft = 40.0;
+      final targetOffset = paddingLeft + index * cardWidth;
+      final viewportWidth = _scrollController.position.viewportDimension;
+      final centeredOffset = targetOffset - viewportWidth / 2 + cardWidth / 2;
+      _scrollController.animateTo(
+        centeredOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  /// Focus a specific card by index
+  void _focusCard(int index) {
+    if (index < 0 || index >= _focusNodes.length) return;
+    _focusNodes[index].requestFocus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -446,7 +523,7 @@ class _NetflixMovieRow extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
           child: Text(
-            title,
+            widget.title,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -458,28 +535,96 @@ class _NetflixMovieRow extends StatelessWidget {
         SizedBox(
           height: 270,
           child: ListView.builder(
+            controller: _scrollController,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 40),
-            itemCount: movies.length,
+            itemCount: widget.movies.length,
             itemBuilder: (context, index) {
-              final movie = movies[index];
+              final movie = widget.movies[index];
               return Padding(
-                padding: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-                child: MovieCard(
-                  movie: movie,
-                  width: 150,
-                  isFirstInRow: index == 0,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) =>
-                            MoviePlayerScreen(movie: movie),
-                        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-                            FadeTransition(opacity: animation, child: child),
-                      ),
-                    );
+                padding:
+                    const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+                child: Focus(
+                  focusNode: _focusNodes[index],
+                  skipTraversal: true, // we handle traversal manually
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent) {
+                      final key = event.logicalKey;
+
+                      // Right arrow — move to next card
+                      if (key == LogicalKeyboardKey.arrowRight) {
+                        if (index < widget.movies.length - 1) {
+                          _focusCard(index + 1);
+                        }
+                        return KeyEventResult.handled;
+                      }
+
+                      // Left arrow — move to previous card or back to sidebar
+                      if (key == LogicalKeyboardKey.arrowLeft) {
+                        if (index > 0) {
+                          _focusCard(index - 1);
+                        } else {
+                          // First card → go back to sidebar
+                          sidebarScope.requestFocus();
+                        }
+                        return KeyEventResult.handled;
+                      }
+
+                      // Up arrow — go to previous row or hero section
+                      if (key == LogicalKeyboardKey.arrowUp) {
+                        FocusScope.of(context)
+                            .focusInDirection(TraversalDirection.up);
+                        return KeyEventResult.handled;
+                      }
+
+                      // Down arrow — go to next row
+                      if (key == LogicalKeyboardKey.arrowDown) {
+                        FocusScope.of(context)
+                            .focusInDirection(TraversalDirection.down);
+                        return KeyEventResult.handled;
+                      }
+
+                      // Select / Enter / OK
+                      if (key == LogicalKeyboardKey.select ||
+                          key == LogicalKeyboardKey.enter ||
+                          key == LogicalKeyboardKey.numpadEnter ||
+                          key == LogicalKeyboardKey.gameButtonA) {
+                        Navigator.of(context).push(
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    MoviePlayerScreen(movie: movie),
+                            transitionsBuilder: (context, animation,
+                                    secondaryAnimation, child) =>
+                                FadeTransition(
+                                    opacity: animation, child: child),
+                          ),
+                        );
+                        return KeyEventResult.handled;
+                      }
+                    }
+                    return KeyEventResult.ignored;
                   },
+                  child: MovieCard(
+                    movie: movie,
+                    width: 150,
+                    isFirstInRow: index == 0,
+                    focusNode: _focusNodes[index],
+                    onTap: () {
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  MoviePlayerScreen(movie: movie),
+                          transitionsBuilder: (context, animation,
+                                  secondaryAnimation, child) =>
+                              FadeTransition(
+                                  opacity: animation, child: child),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
@@ -491,7 +636,7 @@ class _NetflixMovieRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Loading View Skeleton
+// Loading View
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _LoadingView extends StatelessWidget {

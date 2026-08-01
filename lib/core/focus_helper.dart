@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// D-pad / TV remote key handler helper.
-/// Wraps any widget with keyboard navigation, focus detection, and auto-scroll into view.
+// ─────────────────────────────────────────────────────────────────────────────
+// TvFocusDetector — wraps a widget, reports focus state, handles Select keys
+// ─────────────────────────────────────────────────────────────────────────────
+
 class TvFocusDetector extends StatefulWidget {
   final Widget Function(BuildContext context, bool isFocused) builder;
   final VoidCallback? onSelect;
@@ -40,7 +42,6 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
       setState(() => _isFocused = hasFocus);
 
       if (hasFocus && widget.autoScroll) {
-        // Auto-scroll focused item into view center for smooth TV remote navigation
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _focusNode.hasFocus) {
             try {
@@ -50,9 +51,7 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOutCubic,
               );
-            } catch (_) {
-              // Ignore if not inside a Scrollable
-            }
+            } catch (_) {}
           }
         });
       }
@@ -77,7 +76,6 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
-          // Handle all Android TV / TV Remote Select & Enter keys
           if (key == LogicalKeyboardKey.select ||
               key == LogicalKeyboardKey.enter ||
               key == LogicalKeyboardKey.space ||
@@ -94,7 +92,10 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
   }
 }
 
-/// Global key event handler that intercepts Media & Back keys for TV remotes.
+// ─────────────────────────────────────────────────────────────────────────────
+// TvKeyboardShortcuts — global media / back key interceptor
+// ─────────────────────────────────────────────────────────────────────────────
+
 class TvKeyboardShortcuts extends StatelessWidget {
   final Widget child;
   final VoidCallback? onBack;
@@ -119,15 +120,12 @@ class TvKeyboardShortcuts extends StatelessWidget {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
 
-          // Media Play/Pause Remote Buttons
           if (key == LogicalKeyboardKey.mediaPlayPause ||
               key == LogicalKeyboardKey.mediaPlay ||
               key == LogicalKeyboardKey.mediaPause) {
             onPlayPause?.call();
             return;
           }
-
-          // Media Rewind / FastForward Remote Buttons
           if (key == LogicalKeyboardKey.mediaRewind) {
             onSeekLeft?.call();
             return;
@@ -136,8 +134,6 @@ class TvKeyboardShortcuts extends StatelessWidget {
             onSeekRight?.call();
             return;
           }
-
-          // Back / Escape Remote Buttons
           if (key == LogicalKeyboardKey.escape ||
               key == LogicalKeyboardKey.backspace ||
               key == LogicalKeyboardKey.goBack) {

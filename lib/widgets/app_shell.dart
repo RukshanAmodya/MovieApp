@@ -13,7 +13,20 @@ import '../screens/favorites_screen.dart';
 /// Pages in the app
 enum AppPage { home, trending, favorites, profile, search }
 
-/// Root shell with Netflix TV layout (Collapsible Side Rail + Main Content Area)
+// ─────────────────────────────────────────────────────────────────────────────
+// Global focus nodes so app_shell can hand focus to main content
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Call this from the sidebar to move focus into the main content area.
+final FocusScopeNode mainContentScope = FocusScopeNode(debugLabel: 'MainContentScope');
+
+/// Call this from main content to move focus back into the sidebar.
+final FocusScopeNode sidebarScope = FocusScopeNode(debugLabel: 'SidebarScope');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AppShell
+// ─────────────────────────────────────────────────────────────────────────────
+
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -26,6 +39,10 @@ class _AppShellState extends State<AppShell> {
 
   void _navigate(AppPage page) {
     setState(() => _currentPage = page);
+    // After navigation, ensure main content gets focus
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      mainContentScope.requestFocus();
+    });
   }
 
   Widget _buildContent() {
@@ -58,23 +75,26 @@ class _AppShellState extends State<AppShell> {
         child: isWide
             ? Row(
                 children: [
-                  // --- Netflix TV Collapsible Left Sidebar Rail ---
+                  // Left Sidebar
                   _NetflixTvRail(
                     currentPage: _currentPage,
                     onNavigate: _navigate,
                   ),
 
-                  // --- Main Content Area ---
+                  // Main Content Area
                   Expanded(
-                    child: Stack(
-                      children: [
-                        _buildContent(),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: _TopUserBadge(onNavigate: _navigate),
-                        ),
-                      ],
+                    child: FocusScope(
+                      node: mainContentScope,
+                      child: Stack(
+                        children: [
+                          _buildContent(),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: _TopUserBadge(onNavigate: _navigate),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -105,7 +125,7 @@ class _AppShellState extends State<AppShell> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Netflix TV Collapsible Navigation Rail
+// Netflix TV Collapsible Navigation Rail — fully D-Pad aware
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _NetflixTvRail extends StatefulWidget {
@@ -130,9 +150,18 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
     }
   }
 
+  /// Move focus from the rail into the main content area
+  void _exitToMain() {
+    _setExpanded(false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      mainContentScope.requestFocus();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return FocusScope(
+      node: sidebarScope,
       onFocusChange: (focused) => _setExpanded(focused),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
@@ -159,7 +188,7 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
             children: [
               const SizedBox(height: 24),
 
-              // Netflix RooFlix Logo / N-Icon
+              // Logo
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -209,13 +238,14 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
 
               const SizedBox(height: 36),
 
-              // Navigation Menu Items
+              // Nav Items — each handles Right arrow to exit sidebar
               _RailItem(
                 icon: Icons.search_rounded,
                 label: 'Search',
                 isExpanded: _isExpanded,
                 isActive: widget.currentPage == AppPage.search,
                 onTap: () => widget.onNavigate(AppPage.search),
+                onExitRight: _exitToMain,
               ),
               _RailItem(
                 icon: Icons.home_rounded,
@@ -223,6 +253,7 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
                 isExpanded: _isExpanded,
                 isActive: widget.currentPage == AppPage.home,
                 onTap: () => widget.onNavigate(AppPage.home),
+                onExitRight: _exitToMain,
               ),
               _RailItem(
                 icon: Icons.local_fire_department_rounded,
@@ -230,6 +261,7 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
                 isExpanded: _isExpanded,
                 isActive: widget.currentPage == AppPage.trending,
                 onTap: () => widget.onNavigate(AppPage.trending),
+                onExitRight: _exitToMain,
               ),
               _RailItem(
                 icon: Icons.favorite_rounded,
@@ -237,6 +269,7 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
                 isExpanded: _isExpanded,
                 isActive: widget.currentPage == AppPage.favorites,
                 onTap: () => widget.onNavigate(AppPage.favorites),
+                onExitRight: _exitToMain,
               ),
               _RailItem(
                 icon: Icons.person_rounded,
@@ -244,11 +277,12 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
                 isExpanded: _isExpanded,
                 isActive: widget.currentPage == AppPage.profile,
                 onTap: () => widget.onNavigate(AppPage.profile),
+                onExitRight: _exitToMain,
               ),
 
               const Spacer(),
 
-              // User Info Avatar Footer
+              // User info footer
               StreamBuilder<AuthUser?>(
                 stream: AuthService().authStateChanges,
                 builder: (context, snapshot) {
@@ -306,12 +340,17 @@ class _NetflixTvRailState extends State<_NetflixTvRail> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// _RailItem — individual sidebar nav button with full D-Pad handling
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _RailItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isExpanded;
   final bool isActive;
   final VoidCallback onTap;
+  final VoidCallback onExitRight; // called when Right arrow pressed
 
   const _RailItem({
     required this.icon,
@@ -319,6 +358,7 @@ class _RailItem extends StatelessWidget {
     required this.isExpanded,
     required this.isActive,
     required this.onTap,
+    required this.onExitRight,
   });
 
   @override
@@ -327,16 +367,29 @@ class _RailItem extends StatelessWidget {
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
+
+          // Select / Enter / OK — activate item
           if (key == LogicalKeyboardKey.select ||
               key == LogicalKeyboardKey.enter ||
-              key == LogicalKeyboardKey.space ||
-              key == LogicalKeyboardKey.gameButtonA ||
-              key == LogicalKeyboardKey.numpadEnter) {
+              key == LogicalKeyboardKey.numpadEnter ||
+              key == LogicalKeyboardKey.gameButtonA) {
             onTap();
             return KeyEventResult.handled;
           }
+
+          // Right arrow — exit sidebar, enter main canvas
           if (key == LogicalKeyboardKey.arrowRight) {
-            FocusScope.of(context).focusInDirection(TraversalDirection.right);
+            onExitRight();
+            return KeyEventResult.handled;
+          }
+
+          // Up/Down — navigate within sidebar using Flutter's spatial policy
+          if (key == LogicalKeyboardKey.arrowUp) {
+            node.focusInDirection(TraversalDirection.up);
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowDown) {
+            node.focusInDirection(TraversalDirection.down);
             return KeyEventResult.handled;
           }
         }
@@ -377,7 +430,9 @@ class _RailItem extends StatelessWidget {
                     size: 24,
                     color: isFocused
                         ? Colors.white
-                        : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
+                        : (isActive
+                            ? RooflixTheme.primary
+                            : RooflixTheme.textSecondary),
                   ),
                   if (isExpanded) ...[
                     const SizedBox(width: 14),
@@ -386,10 +441,13 @@ class _RailItem extends StatelessWidget {
                         label,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
-                          fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight:
+                              highlighted ? FontWeight.w700 : FontWeight.w500,
                           color: isFocused
                               ? Colors.white
-                              : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
+                              : (isActive
+                                  ? RooflixTheme.primary
+                                  : RooflixTheme.textSecondary),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -406,7 +464,7 @@ class _RailItem extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Top Right User Badge (Floating TV Overlay)
+// Top Right User Badge
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TopUserBadge extends StatelessWidget {
@@ -452,7 +510,9 @@ class _TopUserBadge extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        user != null ? (user.email.split('@').first) : 'Sign In',
+                        user != null
+                            ? (user.email.split('@').first)
+                            : 'Sign In',
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontSize: 13,

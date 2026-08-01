@@ -25,10 +25,24 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
   bool _isMuted = false;
   Timer? _hideTimer;
 
+  // Focus nodes for the player control bar
+  final FocusNode _progressBarFocus = FocusNode(debugLabel: 'progressBar');
+  final FocusNode _rewindFocus = FocusNode(debugLabel: 'rewind');
+  final FocusNode _playPauseFocus = FocusNode(debugLabel: 'playPause');
+  final FocusNode _forwardFocus = FocusNode(debugLabel: 'forward');
+  final FocusNode _muteFocus = FocusNode(debugLabel: 'mute');
+  final FocusNode _speedFocus = FocusNode(debugLabel: 'speed');
+  final FocusNode _backButtonFocus = FocusNode(debugLabel: 'backButton');
+
   @override
   void initState() {
     super.initState();
     _initPlayer();
+
+    // Auto-focus the progress bar when controls are shown
+    _progressBarFocus.addListener(() {
+      if (_progressBarFocus.hasFocus) _userInteracted();
+    });
   }
 
   Future<void> _initPlayer() async {
@@ -42,6 +56,10 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
       });
       _controller.play();
       _startHideTimer();
+      // Give initial focus to play/pause button
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _playPauseFocus.requestFocus();
+      });
     } catch (e) {
       setState(() {
         _hasError = true;
@@ -53,45 +71,46 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
   void dispose() {
     _hideTimer?.cancel();
     _controller.dispose();
+    _progressBarFocus.dispose();
+    _rewindFocus.dispose();
+    _playPauseFocus.dispose();
+    _forwardFocus.dispose();
+    _muteFocus.dispose();
+    _speedFocus.dispose();
+    _backButtonFocus.dispose();
     super.dispose();
   }
 
   void _startHideTimer() {
     _hideTimer?.cancel();
-    // Only auto hide controls if the video is currently playing
     if (_isInitialized && _controller.value.isPlaying) {
       _hideTimer = Timer(const Duration(seconds: 4), () {
         if (mounted && _controller.value.isPlaying) {
-          setState(() {
-            _showControls = false;
-          });
+          setState(() => _showControls = false);
         }
       });
     }
   }
 
-  void _toggleControlsVisibility() {
-    setState(() {
-      _showControls = !_showControls;
+  void _showControlsNow() {
+    setState(() => _showControls = true);
+    _startHideTimer();
+    // Re-focus the play button so d-pad works immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _isInitialized) _playPauseFocus.requestFocus();
     });
-    if (_showControls) {
-      _startHideTimer();
-    } else {
-      _hideTimer?.cancel();
-    }
   }
 
   void _userInteracted() {
     if (!_showControls) {
-      setState(() {
-        _showControls = true;
-      });
+      setState(() => _showControls = true);
     }
     _startHideTimer();
   }
 
   void _togglePlayPause() {
     if (!_isInitialized || _hasError) return;
+    _userInteracted();
     setState(() {
       if (_controller.value.isPlaying) {
         _controller.pause();
@@ -99,7 +118,6 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
         _showControls = true;
       } else {
         _controller.play();
-        _showControls = true;
         _startHideTimer();
       }
     });
@@ -154,12 +172,19 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
         child: MouseRegion(
           onHover: (_) => _userInteracted(),
           child: GestureDetector(
-            onTap: _toggleControlsVisibility,
+            onTap: () {
+              if (_showControls) {
+                _hideTimer?.cancel();
+                setState(() => _showControls = false);
+              } else {
+                _showControlsNow();
+              }
+            },
             behavior: HitTestBehavior.opaque,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // 1. Video Player Area
+                // ── 1. Video Player ──────────────────────────────────────
                 Center(
                   child: _hasError
                       ? Column(
@@ -185,7 +210,8 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                             ),
                             const SizedBox(height: 8),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 32),
                               child: Text(
                                 'Unable to load video stream from source server.',
                                 style: GoogleFonts.plusJakartaSans(
@@ -208,7 +234,7 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                             ),
                 ),
 
-                // 2. Animated Overlay Player Controls (Auto-hides after 4s YouTube style)
+                // ── 2. Controls Overlay ──────────────────────────────────
                 IgnorePointer(
                   ignoring: !_showControls,
                   child: AnimatedOpacity(
@@ -216,13 +242,14 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                     duration: const Duration(milliseconds: 300),
                     child: Stack(
                       children: [
-                        // Top Header Bar with Back Button & Movie Title
+                        // ── Top Bar (Back + Title) ──────────────────────
                         Positioned(
                           top: 0,
                           left: 0,
                           right: 0,
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(24, 36, 24, 20),
+                            padding:
+                                const EdgeInsets.fromLTRB(24, 36, 24, 20),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
@@ -235,38 +262,69 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                             ),
                             child: Row(
                               children: [
-                                // Back Circle Button
-                                TvFocusDetector(
-                                  onSelect: () => Navigator.of(context).pop(),
-                                  builder: (context, isFocused) {
-                                    return InkWell(
-                                      onTap: () => Navigator.of(context).pop(),
-                                      borderRadius: BorderRadius.circular(30),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: isFocused
-                                              ? RooflixTheme.primary
-                                              : Colors.white.withValues(alpha: 0.18),
-                                          shape: BoxShape.circle,
-                                          boxShadow: isFocused
-                                              ? [
-                                                  BoxShadow(
-                                                    color: RooflixTheme.primary
-                                                        .withValues(alpha: 0.5),
-                                                    blurRadius: 16,
-                                                  ),
-                                                ]
-                                              : null,
-                                        ),
-                                        child: const Icon(Icons.arrow_back_rounded,
-                                            color: Colors.white, size: 24),
-                                      ),
-                                    );
+                                // Back Button
+                                Focus(
+                                  focusNode: _backButtonFocus,
+                                  onKeyEvent: (node, event) {
+                                    if (event is KeyDownEvent) {
+                                      final key = event.logicalKey;
+                                      if (key == LogicalKeyboardKey.select ||
+                                          key == LogicalKeyboardKey.enter ||
+                                          key == LogicalKeyboardKey
+                                              .numpadEnter) {
+                                        Navigator.of(context).pop();
+                                        return KeyEventResult.handled;
+                                      }
+                                      // Down → jump to play/pause
+                                      if (key ==
+                                          LogicalKeyboardKey.arrowDown) {
+                                        _playPauseFocus.requestFocus();
+                                        return KeyEventResult.handled;
+                                      }
+                                    }
+                                    return KeyEventResult.ignored;
                                   },
+                                  child: TvFocusDetector(
+                                    focusNode: _backButtonFocus,
+                                    autoScroll: false,
+                                    onSelect: () =>
+                                        Navigator.of(context).pop(),
+                                    builder: (context, isFocused) {
+                                      return InkWell(
+                                        onTap: () =>
+                                            Navigator.of(context).pop(),
+                                        borderRadius:
+                                            BorderRadius.circular(30),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: isFocused
+                                                ? RooflixTheme.primary
+                                                : Colors.white
+                                                    .withValues(alpha: 0.18),
+                                            shape: BoxShape.circle,
+                                            boxShadow: isFocused
+                                                ? [
+                                                    BoxShadow(
+                                                      color: RooflixTheme
+                                                          .primary
+                                                          .withValues(
+                                                              alpha: 0.5),
+                                                      blurRadius: 16,
+                                                    ),
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: const Icon(
+                                              Icons.arrow_back_rounded,
+                                              color: Colors.white,
+                                              size: 24),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
-                                // Movie Title Header
                                 Expanded(
                                   child: Text(
                                     widget.movie.title,
@@ -285,22 +343,25 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                           ),
                         ),
 
-                        // Center Floating Glass Playback Capsule
+                        // ── Center Play Capsule ─────────────────────────
                         if (_isInitialized && !_hasError)
                           Center(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 20, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.55),
+                                color:
+                                    Colors.black.withValues(alpha: 0.55),
                                 borderRadius: BorderRadius.circular(40),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.18),
+                                  color:
+                                      Colors.white.withValues(alpha: 0.18),
                                   width: 1,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.4),
+                                    color:
+                                        Colors.black.withValues(alpha: 0.4),
                                     blurRadius: 28,
                                     offset: const Offset(0, 8),
                                   ),
@@ -309,95 +370,132 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // -10s Rewind
-                                  TvFocusDetector(
-                                    onSelect: () =>
-                                        _seekRelative(const Duration(seconds: -10)),
-                                    builder: (context, isFocused) {
-                                      return IconButton(
-                                        iconSize: 28,
-                                        icon: Icon(
-                                          Icons.replay_10_rounded,
-                                          color: isFocused
-                                              ? RooflixTheme.primary
-                                              : Colors.white,
-                                        ),
-                                        onPressed: () =>
-                                            _seekRelative(const Duration(seconds: -10)),
-                                      );
-                                    },
+                                  // Rewind -10s
+                                  _PlayerIconBtn(
+                                    focusNode: _rewindFocus,
+                                    icon: Icons.replay_10_rounded,
+                                    onPressed: () => _seekRelative(
+                                        const Duration(seconds: -10)),
+                                    onLeft: () =>
+                                        _backButtonFocus.requestFocus(),
+                                    onRight: () =>
+                                        _playPauseFocus.requestFocus(),
+                                    onDown: () =>
+                                        _progressBarFocus.requestFocus(),
+                                    onUp: () =>
+                                        _backButtonFocus.requestFocus(),
                                   ),
                                   const SizedBox(width: 12),
 
-                                  // Main Play / Pause Button
-                                  TvFocusDetector(
-                                    onSelect: _togglePlayPause,
-                                    builder: (context, isFocused) {
-                                      return GestureDetector(
-                                        onTap: _togglePlayPause,
-                                        child: Container(
-                                          width: 54,
-                                          height: 54,
-                                          decoration: BoxDecoration(
-                                            color: RooflixTheme.primary,
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: RooflixTheme.primary
-                                                    .withValues(alpha: 0.5),
-                                                blurRadius: 20,
-                                                spreadRadius: 2,
-                                              ),
-                                            ],
-                                            border: isFocused
-                                                ? Border.all(
-                                                    color: Colors.white, width: 2.5)
-                                                : null,
-                                          ),
-                                          child: Icon(
-                                            _controller.value.isPlaying
-                                                ? Icons.pause_rounded
-                                                : Icons.play_arrow_rounded,
-                                            color: Colors.white,
-                                            size: 32,
-                                          ),
-                                        ),
-                                      );
+                                  // Play / Pause
+                                  Focus(
+                                    focusNode: _playPauseFocus,
+                                    onKeyEvent: (node, event) {
+                                      if (event is KeyDownEvent) {
+                                        final key = event.logicalKey;
+                                        if (key ==
+                                                LogicalKeyboardKey.select ||
+                                            key ==
+                                                LogicalKeyboardKey.enter ||
+                                            key == LogicalKeyboardKey
+                                                .numpadEnter ||
+                                            key == LogicalKeyboardKey.space) {
+                                          _togglePlayPause();
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowLeft) {
+                                          _rewindFocus.requestFocus();
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowRight) {
+                                          _forwardFocus.requestFocus();
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowUp) {
+                                          _backButtonFocus.requestFocus();
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowDown) {
+                                          _progressBarFocus.requestFocus();
+                                          return KeyEventResult.handled;
+                                        }
+                                      }
+                                      return KeyEventResult.ignored;
                                     },
+                                    child: TvFocusDetector(
+                                      focusNode: _playPauseFocus,
+                                      autoScroll: false,
+                                      onSelect: _togglePlayPause,
+                                      builder: (context, isFocused) {
+                                        return GestureDetector(
+                                          onTap: _togglePlayPause,
+                                          child: Container(
+                                            width: 54,
+                                            height: 54,
+                                            decoration: BoxDecoration(
+                                              color: RooflixTheme.primary,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: RooflixTheme.primary
+                                                      .withValues(alpha: 0.5),
+                                                  blurRadius: 20,
+                                                  spreadRadius: 2,
+                                                ),
+                                              ],
+                                              border: isFocused
+                                                  ? Border.all(
+                                                      color: Colors.white,
+                                                      width: 2.5)
+                                                  : null,
+                                            ),
+                                            child: Icon(
+                                              _controller.value.isPlaying
+                                                  ? Icons.pause_rounded
+                                                  : Icons.play_arrow_rounded,
+                                              color: Colors.white,
+                                              size: 32,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
 
-                                  // +10s Fast Forward
-                                  TvFocusDetector(
-                                    onSelect: () =>
-                                        _seekRelative(const Duration(seconds: 10)),
-                                    builder: (context, isFocused) {
-                                      return IconButton(
-                                        iconSize: 28,
-                                        icon: Icon(
-                                          Icons.forward_10_rounded,
-                                          color: isFocused
-                                              ? RooflixTheme.primary
-                                              : Colors.white,
-                                        ),
-                                        onPressed: () =>
-                                            _seekRelative(const Duration(seconds: 10)),
-                                      );
-                                    },
+                                  // Forward +10s
+                                  _PlayerIconBtn(
+                                    focusNode: _forwardFocus,
+                                    icon: Icons.forward_10_rounded,
+                                    onPressed: () => _seekRelative(
+                                        const Duration(seconds: 10)),
+                                    onLeft: () =>
+                                        _playPauseFocus.requestFocus(),
+                                    onRight: () =>
+                                        _muteFocus.requestFocus(),
+                                    onDown: () =>
+                                        _progressBarFocus.requestFocus(),
+                                    onUp: () =>
+                                        _backButtonFocus.requestFocus(),
                                   ),
                                 ],
                               ),
                             ),
                           ),
 
-                        // Bottom Timeline & Options Toolbar
+                        // ── Bottom Toolbar ──────────────────────────────
                         if (_isInitialized && !_hasError)
                           Positioned(
                             bottom: 0,
                             left: 0,
                             right: 0,
                             child: Container(
-                              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                              padding: const EdgeInsets.fromLTRB(
+                                  24, 16, 24, 16),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
@@ -410,36 +508,64 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
                                 children: [
-                                  // 1. D-Pad Navigable Progress Scrub Bar
-                                  TvFocusDetector(
-                                    onSelect: _togglePlayPause,
-                                    builder: (context, isFocused) {
-                                      return Focus(
-                                        onKeyEvent: (node, event) {
-                                          if (event is KeyDownEvent) {
-                                            final key = event.logicalKey;
-                                            if (key == LogicalKeyboardKey.arrowLeft) {
-                                              _seekRelative(const Duration(seconds: -10));
-                                              return KeyEventResult.handled;
-                                            }
-                                            if (key == LogicalKeyboardKey.arrowRight) {
-                                              _seekRelative(const Duration(seconds: 10));
-                                              return KeyEventResult.handled;
-                                            }
-                                          }
-                                          return KeyEventResult.ignored;
-                                        },
-                                        child: AnimatedContainer(
-                                          duration: const Duration(milliseconds: 180),
+                                  // ── Progress Bar ──────────────────
+                                  Focus(
+                                    focusNode: _progressBarFocus,
+                                    onKeyEvent: (node, event) {
+                                      if (event is KeyDownEvent) {
+                                        final key = event.logicalKey;
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowLeft) {
+                                          _seekRelative(
+                                              const Duration(seconds: -10));
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowRight) {
+                                          _seekRelative(
+                                              const Duration(seconds: 10));
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowUp) {
+                                          _playPauseFocus.requestFocus();
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                            LogicalKeyboardKey.arrowDown) {
+                                          _muteFocus.requestFocus();
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (key ==
+                                                LogicalKeyboardKey.select ||
+                                            key ==
+                                                LogicalKeyboardKey.enter) {
+                                          _togglePlayPause();
+                                          return KeyEventResult.handled;
+                                        }
+                                      }
+                                      return KeyEventResult.ignored;
+                                    },
+                                    child: TvFocusDetector(
+                                      focusNode: _progressBarFocus,
+                                      autoScroll: false,
+                                      onSelect: _togglePlayPause,
+                                      builder: (context, isFocused) {
+                                        return AnimatedContainer(
+                                          duration: const Duration(
+                                              milliseconds: 180),
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 10, vertical: 8),
                                           decoration: BoxDecoration(
                                             color: isFocused
-                                                ? RooflixTheme.primary.withValues(alpha: 0.15)
+                                                ? RooflixTheme.primary
+                                                    .withValues(alpha: 0.15)
                                                 : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                             border: Border.all(
                                               color: isFocused
                                                   ? RooflixTheme.primary
@@ -449,8 +575,10 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                             boxShadow: isFocused
                                                 ? [
                                                     BoxShadow(
-                                                      color: RooflixTheme.primary
-                                                          .withValues(alpha: 0.5),
+                                                      color: RooflixTheme
+                                                          .primary
+                                                          .withValues(
+                                                              alpha: 0.5),
                                                       blurRadius: 16,
                                                     ),
                                                   ]
@@ -461,173 +589,122 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                             children: [
                                               ValueListenableBuilder(
                                                 valueListenable: _controller,
-                                                builder: (context, VideoPlayerValue value, child) {
+                                                builder: (context,
+                                                    VideoPlayerValue value,
+                                                    child) {
                                                   return VideoProgressIndicator(
                                                     _controller,
                                                     allowScrubbing: true,
-                                                    padding: const EdgeInsets.symmetric(vertical: 4),
-                                                    colors: VideoProgressColors(
-                                                      playedColor: RooflixTheme.primary,
-                                                      bufferedColor: Colors.white30,
+                                                    padding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                            vertical: 4),
+                                                    colors:
+                                                        VideoProgressColors(
+                                                      playedColor:
+                                                          RooflixTheme.primary,
+                                                      bufferedColor:
+                                                          Colors.white30,
                                                       backgroundColor:
-                                                          isFocused ? Colors.white24 : Colors.white12,
+                                                          isFocused
+                                                              ? Colors.white24
+                                                              : Colors.white12,
                                                     ),
                                                   );
                                                 },
                                               ),
                                               if (isFocused)
                                                 Padding(
-                                                  padding: const EdgeInsets.only(top: 4),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 4),
                                                   child: Text(
-                                                    '◄ Use Left / Right D-Pad to Seek 10s ►',
-                                                    style: GoogleFonts.plusJakartaSans(
+                                                    '◄ Left/Right D-Pad to Seek 10s ►',
+                                                    style: GoogleFonts
+                                                        .plusJakartaSans(
                                                       color: Colors.white,
                                                       fontSize: 11,
-                                                      fontWeight: FontWeight.w800,
+                                                      fontWeight:
+                                                          FontWeight.w800,
                                                     ),
                                                   ),
                                                 ),
                                             ],
                                           ),
-                                        ),
-                                      );
-                                    },
+                                        );
+                                      },
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
 
-                                  // 2. Time Labels & Control Pills Row
+                                  // ── Time Labels + Pill Controls ───
                                   ValueListenableBuilder(
                                     valueListenable: _controller,
-                                    builder: (context, VideoPlayerValue value, child) {
+                                    builder: (context,
+                                        VideoPlayerValue value, child) {
                                       return Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          // Elapsed Time
+                                          // Elapsed time
                                           Text(
                                             _formatDuration(value.position),
-                                            style: GoogleFonts.plusJakartaSans(
+                                            style:
+                                                GoogleFonts.plusJakartaSans(
                                               color: Colors.white70,
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
 
-                                          // Action Pills (Mute, Speed) & Total Duration
+                                          // Control Pills + Duration
                                           Row(
                                             children: [
-                                              // Mute/Unmute Option Pill
-                                              TvFocusDetector(
-                                                onSelect: _toggleMute,
-                                                builder: (context, isFocused) {
-                                                  return InkWell(
-                                                    onTap: _toggleMute,
-                                                    borderRadius:
-                                                        BorderRadius.circular(16),
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                              horizontal: 12,
-                                                              vertical: 6),
-                                                      decoration: BoxDecoration(
-                                                        color: isFocused
-                                                            ? RooflixTheme.primary
-                                                            : Colors.white
-                                                                .withValues(alpha: 0.15),
-                                                        borderRadius:
-                                                            BorderRadius.circular(16),
-                                                        border: Border.all(
-                                                          color: Colors.white
-                                                              .withValues(alpha: 0.2),
-                                                        ),
-                                                      ),
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(
-                                                            _isMuted
-                                                                ? Icons.volume_off_rounded
-                                                                : Icons.volume_up_rounded,
-                                                            color: Colors.white,
-                                                            size: 16,
-                                                          ),
-                                                          const SizedBox(width: 6),
-                                                          Text(
-                                                            _isMuted
-                                                                ? 'Muted'
-                                                                : 'Sound On',
-                                                            style: GoogleFonts
-                                                                .plusJakartaSans(
-                                                              color: Colors.white,
-                                                              fontSize: 12,
-                                                              fontWeight:
-                                                                  FontWeight.w700,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
+                                              // Mute Pill
+                                              _ControlPill(
+                                                focusNode: _muteFocus,
+                                                icon: _isMuted
+                                                    ? Icons
+                                                        .volume_off_rounded
+                                                    : Icons.volume_up_rounded,
+                                                label: _isMuted
+                                                    ? 'Muted'
+                                                    : 'Sound On',
+                                                onPressed: _toggleMute,
+                                                onLeft: () => _progressBarFocus
+                                                    .requestFocus(),
+                                                onRight: () => _speedFocus
+                                                    .requestFocus(),
+                                                onUp: () => _progressBarFocus
+                                                    .requestFocus(),
                                               ),
                                               const SizedBox(width: 10),
 
-                                              // Playback Speed Option Pill
-                                              TvFocusDetector(
-                                                onSelect: _cycleSpeed,
-                                                builder: (context, isFocused) {
-                                                  return InkWell(
-                                                    onTap: _cycleSpeed,
-                                                    borderRadius:
-                                                        BorderRadius.circular(16),
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                              horizontal: 12,
-                                                              vertical: 6),
-                                                      decoration: BoxDecoration(
-                                                        color: isFocused
-                                                            ? RooflixTheme.primary
-                                                            : Colors.white
-                                                                .withValues(alpha: 0.15),
-                                                        borderRadius:
-                                                            BorderRadius.circular(16),
-                                                        border: Border.all(
-                                                          color: Colors.white
-                                                              .withValues(alpha: 0.2),
-                                                        ),
-                                                      ),
-                                                      child: Row(
-                                                        children: [
-                                                          const Icon(
-                                                              Icons.speed_rounded,
-                                                              color: Colors.white,
-                                                              size: 16),
-                                                          const SizedBox(width: 6),
-                                                          Text(
-                                                            '${_playbackSpeed}x',
-                                                            style: GoogleFonts
-                                                                .plusJakartaSans(
-                                                              color: Colors.white,
-                                                              fontSize: 12,
-                                                              fontWeight:
-                                                                  FontWeight.w700,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
+                                              // Speed Pill
+                                              _ControlPill(
+                                                focusNode: _speedFocus,
+                                                icon: Icons.speed_rounded,
+                                                label:
+                                                    '${_playbackSpeed}x',
+                                                onPressed: _cycleSpeed,
+                                                onLeft: () => _muteFocus
+                                                    .requestFocus(),
+                                                onRight: null,
+                                                onUp: () => _progressBarFocus
+                                                    .requestFocus(),
                                               ),
                                               const SizedBox(width: 16),
 
                                               // Total Duration
                                               Text(
-                                                _formatDuration(value.duration),
-                                                style: GoogleFonts.plusJakartaSans(
+                                                _formatDuration(
+                                                    value.duration),
+                                                style: GoogleFonts
+                                                    .plusJakartaSans(
                                                   color: Colors.white70,
                                                   fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
+                                                  fontWeight:
+                                                      FontWeight.w600,
                                                 ),
                                               ),
                                             ],
@@ -648,6 +725,183 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reusable player icon button with explicit D-Pad navigation
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PlayerIconBtn extends StatelessWidget {
+  final FocusNode focusNode;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final VoidCallback? onLeft;
+  final VoidCallback? onRight;
+  final VoidCallback? onUp;
+  final VoidCallback? onDown;
+
+  const _PlayerIconBtn({
+    required this.focusNode,
+    required this.icon,
+    required this.onPressed,
+    this.onLeft,
+    this.onRight,
+    this.onUp,
+    this.onDown,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: focusNode,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.numpadEnter) {
+            onPressed();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowLeft && onLeft != null) {
+            onLeft!();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowRight && onRight != null) {
+            onRight!();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowUp && onUp != null) {
+            onUp!();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowDown && onDown != null) {
+            onDown!();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: TvFocusDetector(
+        focusNode: focusNode,
+        autoScroll: false,
+        onSelect: onPressed,
+        builder: (context, isFocused) {
+          return IconButton(
+            iconSize: 28,
+            icon: Icon(
+              icon,
+              color: isFocused ? RooflixTheme.primary : Colors.white,
+            ),
+            onPressed: onPressed,
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reusable control pill (Mute, Speed) with D-Pad navigation
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ControlPill extends StatelessWidget {
+  final FocusNode focusNode;
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final VoidCallback? onLeft;
+  final VoidCallback? onRight;
+  final VoidCallback? onUp;
+
+  const _ControlPill({
+    required this.focusNode,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.onLeft,
+    this.onRight,
+    this.onUp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: focusNode,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.numpadEnter) {
+            onPressed();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowLeft && onLeft != null) {
+            onLeft!();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowRight && onRight != null) {
+            onRight!();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowUp && onUp != null) {
+            onUp!();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: TvFocusDetector(
+        focusNode: focusNode,
+        autoScroll: false,
+        onSelect: onPressed,
+        builder: (context, isFocused) {
+          return InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isFocused
+                    ? RooflixTheme.primary
+                    : Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isFocused
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.2),
+                ),
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: RooflixTheme.primary.withValues(alpha: 0.5),
+                          blurRadius: 12,
+                        )
+                      ]
+                    : [],
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, color: Colors.white, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -20,6 +20,8 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _firstCardFocusNode = FocusNode();
+
   List<Movie> _allMovies = [];
   List<Movie> _results = [];
   bool _loading = true;
@@ -56,6 +58,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void dispose() {
     _controller.dispose();
     _searchFocusNode.dispose();
+    _firstCardFocusNode.dispose();
     super.dispose();
   }
 
@@ -71,7 +74,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        // Header & D-Pad Focusable Search Bar
+        // Header & Search Bar
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(40, 32, 40, 24),
@@ -89,28 +92,51 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 const SizedBox(height: 18),
 
-                // Search Bar Container with D-Pad focus & left arrow transition
+                // Search bar with full D-Pad key handling
                 TvFocusDetector(
                   focusNode: _searchFocusNode,
                   autofocus: true,
+                  autoScroll: false,
                   onSelect: () => _searchFocusNode.requestFocus(),
                   builder: (context, isFocused) {
-                    return Focus(
-                      onKeyEvent: (node, event) {
+                    return KeyboardListener(
+                      focusNode: FocusNode(skipTraversal: true),
+                      onKeyEvent: (event) {
                         if (event is KeyDownEvent) {
                           final key = event.logicalKey;
+
+                          // Left arrow → back to sidebar
                           if (key == LogicalKeyboardKey.arrowLeft) {
-                            FocusScope.of(context)
-                                .focusInDirection(TraversalDirection.left);
-                            return KeyEventResult.handled;
+                            _searchFocusNode.unfocus();
+                            sidebarScope.requestFocus();
+                            return;
                           }
+
+                          // Right arrow → unfocus search bar and go to first card
+                          if (key == LogicalKeyboardKey.arrowRight) {
+                            _searchFocusNode.unfocus();
+                            // Focus first result card (if any)
+                            if (_results.isNotEmpty) {
+                              WidgetsBinding.instance
+                                  .addPostFrameCallback((_) {
+                                _firstCardFocusNode.requestFocus();
+                              });
+                            }
+                            return;
+                          }
+
+                          // Down arrow → go to first card in grid
                           if (key == LogicalKeyboardKey.arrowDown) {
-                            FocusScope.of(context)
-                                .focusInDirection(TraversalDirection.down);
-                            return KeyEventResult.handled;
+                            _searchFocusNode.unfocus();
+                            if (_results.isNotEmpty) {
+                              WidgetsBinding.instance
+                                  .addPostFrameCallback((_) {
+                                _firstCardFocusNode.requestFocus();
+                              });
+                            }
+                            return;
                           }
                         }
-                        return KeyEventResult.ignored;
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
@@ -172,9 +198,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     );
                   },
                 ),
+
                 const SizedBox(height: 20),
 
-                // Results Count Label
+                // Results count label
                 if (!_loading)
                   Row(
                     children: [
@@ -204,7 +231,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ),
 
-        // Grid Content Area
+        // Grid
         if (_loading)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
@@ -218,7 +245,8 @@ class _SearchScreenState extends State<SearchScreen> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) => ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Container(color: RooflixTheme.surfaceSecondary),
+                  child:
+                      Container(color: RooflixTheme.surfaceSecondary),
                 ),
                 childCount: 12,
               ),
@@ -277,23 +305,50 @@ class _SearchScreenState extends State<SearchScreen> {
                 (context, index) {
                   final movie = _results[index];
                   final isFirstInRow = (index % crossAxisCount) == 0;
+                  final isFirst = index == 0;
 
-                  return MovieCard(
-                    movie: movie,
-                    isFirstInRow: isFirstInRow,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        PageRouteBuilder(
-                          pageBuilder: (context, anim, secondaryAnim) =>
-                              MoviePlayerScreen(movie: movie),
-                          transitionsBuilder:
-                              (context, anim, secondaryAnim, child) =>
-                                  FadeTransition(opacity: anim, child: child),
-                          transitionDuration:
-                              const Duration(milliseconds: 250),
-                        ),
-                      );
+                  return Focus(
+                    // Only assign the tracked first-card node to index 0
+                    focusNode: isFirst ? _firstCardFocusNode : null,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent) {
+                        final key = event.logicalKey;
+
+                        // Left on first-in-row → sidebar
+                        if (key == LogicalKeyboardKey.arrowLeft &&
+                            isFirstInRow) {
+                          sidebarScope.requestFocus();
+                          return KeyEventResult.handled;
+                        }
+
+                        // Up on first row → back to search bar
+                        if (key == LogicalKeyboardKey.arrowUp &&
+                            index < crossAxisCount) {
+                          _searchFocusNode.requestFocus();
+                          return KeyEventResult.handled;
+                        }
+                      }
+                      return KeyEventResult.ignored;
                     },
+                    child: MovieCard(
+                      movie: movie,
+                      isFirstInRow: isFirstInRow,
+                      focusNode: isFirst ? _firstCardFocusNode : null,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          PageRouteBuilder(
+                            pageBuilder: (context, anim, secondaryAnim) =>
+                                MoviePlayerScreen(movie: movie),
+                            transitionsBuilder:
+                                (context, anim, secondaryAnim, child) =>
+                                    FadeTransition(
+                                        opacity: anim, child: child),
+                            transitionDuration:
+                                const Duration(milliseconds: 250),
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
                 childCount: _results.length,
