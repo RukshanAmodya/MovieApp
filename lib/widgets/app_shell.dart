@@ -12,7 +12,7 @@ import '../screens/favorites_screen.dart';
 /// Pages in the app
 enum AppPage { home, trending, favorites, profile, search }
 
-/// Root shell with sidebar + content area (matches index.html layout)
+/// Root shell with Netflix TV layout (Collapsible Side Rail + Main Content Area)
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -51,319 +51,330 @@ class _AppShellState extends State<AppShell> {
       backgroundColor: RooflixTheme.background,
       body: TvKeyboardShortcuts(
         onBack: () {
-          // Allow Navigator to pop if there's a route to pop
           final nav = Navigator.of(context, rootNavigator: false);
           if (nav.canPop()) nav.pop();
         },
         child: isWide
-          ? Row(
-              children: [
-                // --- Left Sidebar ---
-                _Sidebar(currentPage: _currentPage, onNavigate: _navigate),
-                // --- Main content ---
-                Expanded(
-                  child: Column(
-                    children: [
-                      _TopHeader(onNavigate: _navigate),
-                      Expanded(child: _buildContent()),
-                    ],
-                  ),
-                ),
-              ],
-            )
-          : Stack(
-              children: [
-                Column(
-                  children: [
-                    _TopHeader(onNavigate: _navigate),
-                    Expanded(child: _buildContent()),
-                    const SizedBox(height: 80),
-                  ],
-                ),
-                // Mobile bottom nav
-                Positioned(
-                  left: 24,
-                  right: 24,
-                  bottom: 16,
-                  child: _MobileBottomNav(
+            ? Row(
+                children: [
+                  // --- Netflix TV Collapsible Left Sidebar Rail ---
+                  _NetflixTvRail(
                     currentPage: _currentPage,
                     onNavigate: _navigate,
                   ),
-                ),
-              ],
-            ),
+
+                  // --- Main Content Area ---
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        _buildContent(),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: _TopUserBadge(onNavigate: _navigate),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : Stack(
+                children: [
+                  Column(
+                    children: [
+                      _MobileTopHeader(onNavigate: _navigate),
+                      Expanded(child: _buildContent()),
+                      const SizedBox(height: 70),
+                    ],
+                  ),
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 16,
+                    child: _MobileBottomNav(
+                      currentPage: _currentPage,
+                      onNavigate: _navigate,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Left Sidebar
+// Netflix TV Collapsible Navigation Rail
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _Sidebar extends StatelessWidget {
+class _NetflixTvRail extends StatefulWidget {
   final AppPage currentPage;
   final ValueChanged<AppPage> onNavigate;
-  const _Sidebar({required this.currentPage, required this.onNavigate});
+
+  const _NetflixTvRail({
+    required this.currentPage,
+    required this.onNavigate,
+  });
+
+  @override
+  State<_NetflixTvRail> createState() => _NetflixTvRailState();
+}
+
+class _NetflixTvRailState extends State<_NetflixTvRail> {
+  bool _isExpanded = false;
+
+  void _setExpanded(bool expanded) {
+    if (_isExpanded != expanded) {
+      setState(() => _isExpanded = expanded);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
-        border: Border(right: BorderSide(color: RooflixTheme.separator, width: 1)),
-      ),
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Logo
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+    return FocusScope(
+      onFocusChange: (focused) => _setExpanded(focused),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        width: _isExpanded ? 240 : 72,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F0F0F).withValues(alpha: 0.95),
+          border: const Border(
+            right: BorderSide(color: Color(0x1AFFFFFF), width: 1),
+          ),
+          boxShadow: _isExpanded
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.8),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                ]
+              : [],
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+
+              // Netflix RooFlix Logo / N-Icon
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: RooflixTheme.primary,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: RooflixTheme.primary.withValues(alpha: 0.5),
+                            blurRadius: 16,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
                         child: Text(
-                          'RooFlix',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            color: RooflixTheme.primary,
-                            letterSpacing: -0.5,
+                          'R',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                       ),
-
-                      // Explore section
-                      _SectionLabel('Explore'),
-                      _SidebarItem(
-                        icon: Icons.home_rounded,
-                        label: 'Home',
-                        isActive: currentPage == AppPage.home,
-                        onTap: () => onNavigate(AppPage.home),
+                    ),
+                    if (_isExpanded) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'ROOFLIX',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: RooflixTheme.primary,
+                            letterSpacing: 1.5,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      _SidebarItem(
-                        icon: Icons.local_fire_department_rounded,
-                        label: 'Trending',
-                        isActive: currentPage == AppPage.trending,
-                        onTap: () => onNavigate(AppPage.trending),
-                      ),
-                      _SidebarItem(
-                        icon: Icons.favorite_rounded,
-                        label: 'Favorites',
-                        isActive: currentPage == AppPage.favorites,
-                        onTap: () => onNavigate(AppPage.favorites),
-                      ),
+                    ],
+                  ],
+                ),
+              ),
 
-                      const SizedBox(height: 24),
+              const SizedBox(height: 36),
 
-                      // Account section
-                      _SectionLabel('Account'),
-                      _SidebarItem(
-                        icon: Icons.account_circle_rounded,
-                        label: 'Profile',
-                        isActive: currentPage == AppPage.profile,
-                        onTap: () => onNavigate(AppPage.profile),
-                      ),
+              // Navigation Menu Items
+              _RailItem(
+                icon: Icons.search_rounded,
+                label: 'Search',
+                isExpanded: _isExpanded,
+                isActive: widget.currentPage == AppPage.search,
+                onTap: () => widget.onNavigate(AppPage.search),
+              ),
+              _RailItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                isExpanded: _isExpanded,
+                isActive: widget.currentPage == AppPage.home,
+                onTap: () => widget.onNavigate(AppPage.home),
+              ),
+              _RailItem(
+                icon: Icons.local_fire_department_rounded,
+                label: 'Trending',
+                isExpanded: _isExpanded,
+                isActive: widget.currentPage == AppPage.trending,
+                onTap: () => widget.onNavigate(AppPage.trending),
+              ),
+              _RailItem(
+                icon: Icons.favorite_rounded,
+                label: 'Favorites',
+                isExpanded: _isExpanded,
+                isActive: widget.currentPage == AppPage.favorites,
+                onTap: () => widget.onNavigate(AppPage.favorites),
+              ),
+              _RailItem(
+                icon: Icons.person_rounded,
+                label: 'Profile',
+                isExpanded: _isExpanded,
+                isActive: widget.currentPage == AppPage.profile,
+                onTap: () => widget.onNavigate(AppPage.profile),
+              ),
 
-                      const Spacer(),
+              const Spacer(),
 
-                      // User footer
-                      StreamBuilder<AuthUser?>(
-                        stream: AuthService().authStateChanges,
-                        builder: (context, snapshot) {
-                          final user = snapshot.data;
-                          if (user == null) return const SizedBox.shrink();
-                          return Container(
-                            margin: const EdgeInsets.all(16),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: RooflixTheme.surfaceSecondary,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: RooflixTheme.separator),
+              // User Info Avatar Footer
+              StreamBuilder<AuthUser?>(
+                stream: AuthService().authStateChanges,
+                builder: (context, snapshot) {
+                  final user = snapshot.data;
+                  if (user == null) return const SizedBox.shrink();
+
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: RooflixTheme.primary,
+                          child: Text(
+                            user.email.isNotEmpty
+                                ? user.email[0].toUpperCase()
+                                : 'U',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
-                            child: Row(
+                          ),
+                        ),
+                        if (_isExpanded) ...[
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: RooflixTheme.primaryLight,
-                                  child: Text(
-                                    user.email.isNotEmpty
-                                        ? user.email[0].toUpperCase()
-                                        : 'U',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: RooflixTheme.primary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                    ),
+                                Text(
+                                  user.email,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        user.displayName ?? 'User',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: RooflixTheme.textPrimary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        user.email,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 11,
-                                          color: RooflixTheme.textMuted,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
-                          );
-                        },
-                      ),
-                      // Sign out button
-                      StreamBuilder<AuthUser?>(
-                        stream: AuthService().authStateChanges,
-                        builder: (context, snapshot) {
-                          final user = snapshot.data;
-                          if (user == null) return const SizedBox.shrink();
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                            child: TextButton.icon(
-                              onPressed: () async => await AuthService().signOut(),
-                              icon: const Icon(Icons.logout_rounded, size: 18),
-                              label: Text('Log Out',
-                                  style: GoogleFonts.plusJakartaSans(
-                                      fontWeight: FontWeight.w700)),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.red.shade400,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
               ),
-            );
-          },
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  final String label;
-  const _SectionLabel(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 6),
-      child: Text(
-        label.toUpperCase(),
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: RooflixTheme.textMuted,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _SidebarItem extends StatefulWidget {
+class _RailItem extends StatelessWidget {
   final IconData icon;
   final String label;
+  final bool isExpanded;
   final bool isActive;
   final VoidCallback onTap;
 
-  const _SidebarItem({
+  const _RailItem({
     required this.icon,
     required this.label,
+    required this.isExpanded,
     required this.isActive,
     required this.onTap,
   });
 
   @override
-  State<_SidebarItem> createState() => _SidebarItemState();
-}
-
-class _SidebarItemState extends State<_SidebarItem> {
-  bool _hovering = false;
-
-  @override
   Widget build(BuildContext context) {
-    final active = widget.isActive;
-    // TvFocusDetector gives us D-pad Select/Enter + isFocused state
     return TvFocusDetector(
-      onSelect: widget.onTap,
+      onSelect: onTap,
       builder: (context, isFocused) {
-        final highlighted = active || _hovering || isFocused;
-        return MouseRegion(
-          onEnter: (_) => setState(() => _hovering = true),
-          onExit: (_) => setState(() => _hovering = false),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(
-                color: active
-                    ? RooflixTheme.primary.withValues(alpha: 0.08)
-                    : (highlighted
-                        ? RooflixTheme.primary.withValues(alpha: 0.05)
-                        : Colors.transparent),
-                borderRadius: BorderRadius.circular(14),
-                border: isFocused && !active
-                    ? Border.all(
-                        color: RooflixTheme.focusRing.withValues(alpha: 0.4),
-                        width: 1.5)
-                    : null,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.icon,
-                    size: 20,
-                    color: highlighted
-                        ? RooflixTheme.primary
-                        : RooflixTheme.textSecondary,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.label,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                      color: highlighted
-                          ? RooflixTheme.primary
-                          : RooflixTheme.textSecondary,
+        final highlighted = isActive || isFocused;
+
+        return GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: isFocused
+                  ? RooflixTheme.primary
+                  : (isActive
+                      ? RooflixTheme.primary.withValues(alpha: 0.15)
+                      : Colors.transparent),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: isFocused
+                  ? [
+                      BoxShadow(
+                        color: RooflixTheme.primary.withValues(alpha: 0.5),
+                        blurRadius: 16,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 24,
+                  color: isFocused
+                      ? Colors.white
+                      : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
+                ),
+                if (isExpanded) ...[
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
+                        color: isFocused
+                            ? Colors.white
+                            : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
         );
@@ -373,175 +384,105 @@ class _SidebarItemState extends State<_SidebarItem> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Top Header
+// Top Right User Badge (Floating TV Overlay)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _TopHeader extends StatefulWidget {
+class _TopUserBadge extends StatelessWidget {
   final ValueChanged<AppPage> onNavigate;
-  const _TopHeader({required this.onNavigate});
-
-  @override
-  State<_TopHeader> createState() => _TopHeaderState();
-}
-
-class _TopHeaderState extends State<_TopHeader> {
-  final _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  const _TopUserBadge({required this.onNavigate});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 72,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
-        border: Border(
-          bottom: BorderSide(color: RooflixTheme.separator, width: 1),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          children: [
-            // Search bar
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: TextField(
-                  controller: _searchController,
-                  onSubmitted: (v) {
-                    if (v.isNotEmpty) {
-                      widget.onNavigate(AppPage.search);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search movies, series...',
-                    hintStyle: GoogleFonts.plusJakartaSans(
-                      color: RooflixTheme.textMuted,
-                      fontSize: 14,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: RooflixTheme.textMuted,
-                      size: 20,
-                    ),
-                    filled: true,
-                    fillColor: RooflixTheme.surfaceSecondary,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(
-                          color: RooflixTheme.primary, width: 1.5),
+    return StreamBuilder<AuthUser?>(
+      stream: AuthService().authStateChanges,
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: TvFocusDetector(
+            onSelect: () => onNavigate(AppPage.profile),
+            builder: (context, isFocused) {
+              return GestureDetector(
+                onTap: () => onNavigate(AppPage.profile),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isFocused
+                        ? RooflixTheme.primary
+                        : Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isFocused
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.15),
                     ),
                   ),
-                ),
-              ),
-            ),
-            const Spacer(),
-
-            // Auth buttons
-            StreamBuilder<AuthUser?>(
-              stream: AuthService().authStateChanges,
-              builder: (context, snapshot) {
-                final user = snapshot.data;
-                if (user != null) {
-                  return Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        user.email,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: RooflixTheme.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Icon(
+                        user != null
+                            ? Icons.account_circle_rounded
+                            : Icons.login_rounded,
+                        color: Colors.white,
+                        size: 20,
                       ),
                       const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => widget.onNavigate(AppPage.profile),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: RooflixTheme.primaryLight,
-                          child: Text(
-                            user.email.isNotEmpty
-                                ? user.email[0].toUpperCase()
-                                : 'U',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: RooflixTheme.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
+                      Text(
+                        user != null ? (user.email.split('@').first) : 'Sign In',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
-                  );
-                }
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: () => widget.onNavigate(AppPage.profile),
-                      style: TextButton.styleFrom(
-                        foregroundColor: RooflixTheme.textSecondary,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                      ),
-                      child: Text(
-                        'Sign In',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () => widget.onNavigate(AppPage.profile),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: RooflixTheme.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                        shadowColor:
-                            RooflixTheme.primary.withValues(alpha: 0.3),
-                      ),
-                      child: Text(
-                        'Join',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mobile Bottom Nav
+// Mobile Header & Nav
 // ─────────────────────────────────────────────────────────────────────────────
+
+class _MobileTopHeader extends StatelessWidget {
+  final ValueChanged<AppPage> onNavigate;
+  const _MobileTopHeader({required this.onNavigate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 44, 20, 16),
+      color: RooflixTheme.background,
+      child: Row(
+        children: [
+          Text(
+            'ROOFLIX',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: RooflixTheme.primary,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: () => onNavigate(AppPage.search),
+            icon: const Icon(Icons.search_rounded, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _MobileBottomNav extends StatelessWidget {
   final AppPage currentPage;
@@ -552,18 +493,11 @@ class _MobileBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 64,
+      height: 60,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: RooflixTheme.separator),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: const Color(0xFF1F1F1F).withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -593,7 +527,7 @@ class _MobileBottomNav extends StatelessWidget {
             onTap: onNavigate,
           ),
           _MobileNavItem(
-            icon: Icons.account_circle_rounded,
+            icon: Icons.person_rounded,
             page: AppPage.profile,
             currentPage: currentPage,
             onTap: onNavigate,
@@ -625,7 +559,7 @@ class _MobileNavItem extends StatelessWidget {
       icon: Icon(
         icon,
         color: isActive ? RooflixTheme.primary : RooflixTheme.textMuted,
-        size: 26,
+        size: 24,
       ),
     );
   }

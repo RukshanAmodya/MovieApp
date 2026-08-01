@@ -2,36 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class RooflixTheme {
-  // Apple TV Light Theme - Crisp, clean, minimalist high-contrast aesthetics
-  static const Color background = Color(0xFFF2F2F7);
-  static const Color surface = Colors.white;
-  static const Color surfaceSecondary = Color(0xFFE5E5EA);
-  static const Color surfaceGlass = Color(0xCCFFFFFF); // 80% frosted glass
-  
-  // Apple TV Blue / Indigo vibrant focus accent
-  static const Color primary = Color(0xFF007AFF);       // Apple TV System Blue
-  static const Color primaryDark = Color(0xFF0056B3);
-  static const Color primaryLight = Color(0xFFE5F1FF);
-  
-  static const Color textPrimary = Color(0xFF000000);
-  static const Color textSecondary = Color(0xFF3C3C43);
-  static const Color textMuted = Color(0xFF8E8E93);
-  static const Color separator = Color(0x1F000000);     // 12% black border
-  
+  // Netflix Dark Theme Aesthetics
+  static const Color background = Color(0xFF141414);
+  static const Color surface = Color(0xFF181818);
+  static const Color surfaceSecondary = Color(0xFF2F2F2F);
+  static const Color surfaceGlass = Color(0xE6141414); // 90% dark glass
+
+  // Netflix Signature Red focus accent
+  static const Color primary = Color(0xFFE50914); // Netflix Red
+  static const Color primaryDark = Color(0xFFB81D24);
+  static const Color primaryLight = Color(0xFFFF3B30);
+
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFB3B3B3);
+  static const Color textMuted = Color(0xFF808080);
+  static const Color separator = Color(0x1AFFFFFF); // 10% white border
+
   // Focus ring glow color for TV navigation
-  static const Color focusRing = Color(0xFF007AFF);
+  static const Color focusRing = Color(0xFFE50914);
 
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: background,
-      colorScheme: const ColorScheme.light(
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
         primary: primary,
         surface: surface,
         onPrimary: Colors.white,
         onSurface: textPrimary,
       ),
-      textTheme: GoogleFonts.plusJakartaSansTextTheme().copyWith(
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.dark().textTheme).copyWith(
         displayLarge: GoogleFonts.plusJakartaSans(
           fontSize: 36,
           fontWeight: FontWeight.w800,
@@ -69,18 +70,18 @@ class RooflixTheme {
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(16),
         ),
         margin: EdgeInsets.zero,
       ),
     );
   }
 
-  // Apple TV Style dynamic focus card decoration
+  // Netflix Style dynamic focus card decoration
   static BoxDecoration cardDecoration({bool focused = false}) {
     return BoxDecoration(
       color: surface,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(16),
       border: Border.all(
         color: focused ? focusRing : Colors.transparent,
         width: focused ? 3.0 : 0,
@@ -88,21 +89,21 @@ class RooflixTheme {
       boxShadow: focused
           ? [
               BoxShadow(
-                color: focusRing.withValues(alpha: 0.35),
-                blurRadius: 30,
-                spreadRadius: 4,
-                offset: const Offset(0, 12),
+                color: focusRing.withValues(alpha: 0.5),
+                blurRadius: 28,
+                spreadRadius: 3,
+                offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
+                color: Colors.black.withValues(alpha: 0.8),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
             ]
           : [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 14,
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],

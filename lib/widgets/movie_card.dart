@@ -9,12 +9,14 @@ class MovieCard extends StatefulWidget {
   final Movie movie;
   final VoidCallback? onTap;
   final bool autofocus;
+  final double width;
 
   const MovieCard({
     super.key,
     required this.movie,
     this.onTap,
     this.autofocus = false,
+    this.width = 160,
   });
 
   @override
@@ -26,7 +28,7 @@ class _MovieCardState extends State<MovieCard>
   bool _hovering = false;
   late AnimationController _ctrl;
   late Animation<double> _scale;
-  late Animation<double> _shadow;
+  late Animation<double> _glow;
 
   @override
   void initState() {
@@ -35,10 +37,10 @@ class _MovieCardState extends State<MovieCard>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    _scale = Tween<double>(begin: 1.0, end: 1.08).animate(
+    _scale = Tween<double>(begin: 1.0, end: 1.10).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
     );
-    _shadow = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _glow = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
     );
   }
@@ -67,7 +69,8 @@ class _MovieCardState extends State<MovieCard>
         final active = isFocused || _hovering;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (active && _ctrl.status != AnimationStatus.forward &&
+          if (active &&
+              _ctrl.status != AnimationStatus.forward &&
               _ctrl.status != AnimationStatus.completed) {
             _ctrl.forward();
           } else if (!active &&
@@ -89,68 +92,72 @@ class _MovieCardState extends State<MovieCard>
                 return Transform.scale(
                   scale: _scale.value,
                   child: Container(
+                    width: widget.width,
                     decoration: BoxDecoration(
                       color: RooflixTheme.surface,
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: active
                             ? RooflixTheme.primary
-                            : Colors.white.withValues(alpha: 0.8),
+                            : Colors.white.withValues(alpha: 0.08),
                         width: active ? 3.0 : 1.0,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(
-                              alpha: 0.06 + 0.12 * _shadow.value),
-                          blurRadius: 16 + 24 * _shadow.value,
-                          offset: Offset(0, 4 + 10 * _shadow.value),
+                              alpha: 0.5 + 0.3 * _glow.value),
+                          blurRadius: 10 + 15 * _glow.value,
+                          offset: const Offset(0, 4),
                         ),
                         if (active)
                           BoxShadow(
-                            color: RooflixTheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 28,
-                            spreadRadius: 3,
+                            color: RooflixTheme.primary
+                                .withValues(alpha: 0.5),
+                            blurRadius: 24,
+                            spreadRadius: 2,
                           ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(21),
+                      borderRadius: BorderRadius.circular(10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Poster image section
-                          Expanded(
+                          // Poster image section (2:3 aspect ratio)
+                          AspectRatio(
+                            aspectRatio: 2 / 3,
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
                                 _CoverImage(url: widget.movie.coverUrl),
 
-                                // Subtle top gradient overlay
+                                // Dark Vignette Gradient
                                 DecoratedBox(
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       begin: Alignment.topCenter,
                                       end: Alignment.bottomCenter,
                                       colors: [
-                                        Colors.black.withValues(alpha: 0.2),
                                         Colors.transparent,
-                                        Colors.black.withValues(alpha: active ? 0.7 : 0.4),
+                                        Colors.black.withValues(
+                                            alpha: active ? 0.85 : 0.5),
                                       ],
-                                      stops: const [0.0, 0.5, 1.0],
+                                      stops: const [0.5, 1.0],
                                     ),
                                   ),
                                 ),
 
-                                // HD / 4K TV Badge on poster
+                                // HD / 4K Badge
                                 Positioned(
-                                  top: 10,
-                                  right: 10,
+                                  top: 8,
+                                  right: 8,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 3),
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.55),
-                                      borderRadius: BorderRadius.circular(6),
+                                      color: Colors.black.withValues(alpha: 0.75),
+                                      borderRadius: BorderRadius.circular(4),
                                       border: Border.all(
                                         color: Colors.white.withValues(alpha: 0.2),
                                         width: 0.5,
@@ -168,22 +175,22 @@ class _MovieCardState extends State<MovieCard>
                                   ),
                                 ),
 
-                                // Apple TV style play icon overlay on focus/hover
+                                // Netflix Style Red Play Icon on Focus
                                 AnimatedOpacity(
                                   opacity: active ? 1.0 : 0.0,
                                   duration: const Duration(milliseconds: 180),
                                   child: Center(
                                     child: Container(
-                                      width: 48,
-                                      height: 48,
+                                      width: 44,
+                                      height: 44,
                                       decoration: BoxDecoration(
                                         color: RooflixTheme.primary,
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
                                             color: RooflixTheme.primary
-                                                .withValues(alpha: 0.5),
-                                            blurRadius: 20,
+                                                .withValues(alpha: 0.6),
+                                            blurRadius: 18,
                                             spreadRadius: 2,
                                           ),
                                         ],
@@ -191,7 +198,7 @@ class _MovieCardState extends State<MovieCard>
                                       child: const Icon(
                                         Icons.play_arrow_rounded,
                                         color: Colors.white,
-                                        size: 30,
+                                        size: 28,
                                       ),
                                     ),
                                   ),
@@ -202,22 +209,22 @@ class _MovieCardState extends State<MovieCard>
 
                           // Title section below poster
                           Container(
-                            padding: const EdgeInsets.all(12),
-                            color: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            color: RooflixTheme.surface,
                             width: double.infinity,
                             child: Text(
                               widget.movie.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: active
                                     ? FontWeight.w700
                                     : FontWeight.w600,
                                 color: active
-                                    ? RooflixTheme.primary
-                                    : RooflixTheme.textPrimary,
-                                letterSpacing: -0.2,
+                                    ? Colors.white
+                                    : RooflixTheme.textSecondary,
                               ),
                             ),
                           ),
@@ -246,7 +253,8 @@ class _CoverImage extends StatelessWidget {
       imageUrl: url,
       fit: BoxFit.cover,
       width: double.infinity,
-      placeholder: (context, url) => Container(color: RooflixTheme.surfaceSecondary),
+      placeholder: (context, url) =>
+          Container(color: RooflixTheme.surfaceSecondary),
       errorWidget: (context, url, error) => const _PlaceholderCover(),
     );
   }
@@ -262,7 +270,7 @@ class _PlaceholderCover extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.movie_rounded,
-          size: 42,
+          size: 38,
           color: RooflixTheme.textMuted.withValues(alpha: 0.5),
         ),
       ),

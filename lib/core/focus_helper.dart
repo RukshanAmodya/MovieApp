@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// D-pad / TV remote key handler helper.
-/// Wraps any widget with keyboard navigation and focus detection.
+/// Wraps any widget with keyboard navigation, focus detection, and auto-scroll into view.
 class TvFocusDetector extends StatefulWidget {
   final Widget Function(BuildContext context, bool isFocused) builder;
   final VoidCallback? onSelect;
   final FocusNode? focusNode;
   final bool autofocus;
+  final bool autoScroll;
 
   const TvFocusDetector({
     super.key,
@@ -15,6 +16,7 @@ class TvFocusDetector extends StatefulWidget {
     this.onSelect,
     this.focusNode,
     this.autofocus = false,
+    this.autoScroll = true,
   });
 
   @override
@@ -34,7 +36,26 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
 
   void _onFocusChange() {
     if (mounted) {
-      setState(() => _isFocused = _focusNode.hasFocus);
+      final hasFocus = _focusNode.hasFocus;
+      setState(() => _isFocused = hasFocus);
+
+      if (hasFocus && widget.autoScroll) {
+        // Auto-scroll focused item into view center for smooth TV remote navigation
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _focusNode.hasFocus) {
+            try {
+              Scrollable.ensureVisible(
+                context,
+                alignment: 0.5,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+              );
+            } catch (_) {
+              // Ignore if not inside a Scrollable
+            }
+          }
+        });
+      }
     }
   }
 
@@ -55,10 +76,11 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
       autofocus: widget.autofocus,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.select ||
-              event.logicalKey == LogicalKeyboardKey.enter ||
-              event.logicalKey == LogicalKeyboardKey.space ||
-              event.logicalKey == LogicalKeyboardKey.gameButtonA) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.space ||
+              key == LogicalKeyboardKey.gameButtonA) {
             widget.onSelect?.call();
             return KeyEventResult.handled;
           }
@@ -71,7 +93,7 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
 }
 
 /// Creates a [FocusTraversalGroup] with [ReadingOrderTraversalPolicy]
-/// so D-pad navigates predictably through a grid left→right, top→bottom.
+/// so D-pad navigates predictably through a grid/list left→right, top→bottom.
 class TvGridFocusGroup extends StatelessWidget {
   final Widget child;
   const TvGridFocusGroup({super.key, required this.child});
@@ -85,8 +107,8 @@ class TvGridFocusGroup extends StatelessWidget {
   }
 }
 
-/// Global key event handler that intercepts D-pad arrow keys and
-/// routes them to Flutter's focus system, and handles Back/Escape.
+/// Global key event handler that intercepts Media/Back keys for TV remote,
+/// while letting Flutter's native FocusTraversal system handle Arrow keys 1-by-1 cleanly.
 class TvKeyboardShortcuts extends StatelessWidget {
   final Widget child;
   final VoidCallback? onBack;
@@ -110,7 +132,7 @@ class TvKeyboardShortcuts extends StatelessWidget {
       onKeyEvent: (event) {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
-          
+
           // Media Play/Pause Remote Buttons
           if (key == LogicalKeyboardKey.mediaPlayPause ||
               key == LogicalKeyboardKey.mediaPlay ||
@@ -129,46 +151,12 @@ class TvKeyboardShortcuts extends StatelessWidget {
             return;
           }
 
-          switch (key) {
-            case LogicalKeyboardKey.arrowUp:
-              FocusManager.instance.primaryFocus
-                  ?.focusInDirection(TraversalDirection.up);
-              break;
-            case LogicalKeyboardKey.arrowDown:
-              FocusManager.instance.primaryFocus
-                  ?.focusInDirection(TraversalDirection.down);
-              break;
-            case LogicalKeyboardKey.arrowLeft:
-              if (onSeekLeft != null) {
-                onSeekLeft!();
-              } else {
-                FocusManager.instance.primaryFocus
-                    ?.focusInDirection(TraversalDirection.left);
-              }
-              break;
-            case LogicalKeyboardKey.arrowRight:
-              if (onSeekRight != null) {
-                onSeekRight!();
-              } else {
-                FocusManager.instance.primaryFocus
-                    ?.focusInDirection(TraversalDirection.right);
-              }
-              break;
-            case LogicalKeyboardKey.select:
-            case LogicalKeyboardKey.enter:
-            case LogicalKeyboardKey.space:
-            case LogicalKeyboardKey.gameButtonA:
-              if (onPlayPause != null) {
-                onPlayPause!();
-              }
-              break;
-            case LogicalKeyboardKey.escape:
-            case LogicalKeyboardKey.backspace:
-            case LogicalKeyboardKey.goBack:
-              onBack?.call();
-              break;
-            default:
-              break;
+          // Back/Escape Remote Buttons
+          if (key == LogicalKeyboardKey.escape ||
+              key == LogicalKeyboardKey.backspace ||
+              key == LogicalKeyboardKey.goBack) {
+            onBack?.call();
+            return;
           }
         }
       },
