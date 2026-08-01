@@ -159,12 +159,12 @@ class _AuthScreenState extends State<AuthScreen>
                   Container(
                     padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: RooflixTheme.surface,
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: RooflixTheme.separator),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
+                          color: Colors.black.withValues(alpha: 0.6),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -178,22 +178,22 @@ class _AuthScreenState extends State<AuthScreen>
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: Colors.red.shade50,
+                              color: const Color(0x33E50914),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: Colors.red.shade100),
+                              border: Border.all(color: RooflixTheme.primary.withValues(alpha: 0.4)),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.error_outline_rounded,
-                                    color: Colors.red.shade600, size: 18),
+                                const Icon(Icons.error_outline_rounded,
+                                    color: Color(0xFFFF4D4D), size: 18),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
                                     style: GoogleFonts.plusJakartaSans(
-                                      color: Colors.red.shade700,
+                                      color: const Color(0xFFFF4D4D),
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
@@ -208,21 +208,21 @@ class _AuthScreenState extends State<AuthScreen>
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: RooflixTheme.primaryLight,
+                              color: RooflixTheme.primary.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                   color: RooflixTheme.primary
-                                      .withValues(alpha: 0.2)),
+                                      .withValues(alpha: 0.4)),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.check_circle_rounded,
-                                    color: RooflixTheme.primary, size: 18),
+                                const Icon(Icons.check_circle_rounded,
+                                    color: Colors.white, size: 18),
                                 const SizedBox(width: 10),
                                 Text(
                                   _successMessage!,
                                   style: GoogleFonts.plusJakartaSans(
-                                    color: RooflixTheme.primaryDark,
+                                    color: Colors.white,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -436,12 +436,12 @@ class _LoggedInView extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: RooflixTheme.surface,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: RooflixTheme.separator),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Colors.black.withValues(alpha: 0.6),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),

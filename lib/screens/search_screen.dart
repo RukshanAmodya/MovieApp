@@ -81,6 +81,11 @@ class _SearchScreenState extends State<SearchScreen> {
                 TextField(
                   controller: _controller,
                   autofocus: true,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Search movies, titles...',
                     hintStyle: GoogleFonts.plusJakartaSans(
@@ -100,7 +105,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: RooflixTheme.surfaceSecondary,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 16),
                     border: OutlineInputBorder(
@@ -110,7 +115,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
                       borderSide:
-                          BorderSide(color: RooflixTheme.separator, width: 1),
+                          BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
