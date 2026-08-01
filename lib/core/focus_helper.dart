@@ -47,7 +47,7 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
               Scrollable.ensureVisible(
                 context,
                 alignment: 0.5,
-                duration: const Duration(milliseconds: 250),
+                duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOutCubic,
               );
             } catch (_) {
@@ -77,10 +77,12 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
+          // Handle all Android TV / TV Remote Select & Enter keys
           if (key == LogicalKeyboardKey.select ||
               key == LogicalKeyboardKey.enter ||
               key == LogicalKeyboardKey.space ||
-              key == LogicalKeyboardKey.gameButtonA) {
+              key == LogicalKeyboardKey.gameButtonA ||
+              key == LogicalKeyboardKey.numpadEnter) {
             widget.onSelect?.call();
             return KeyEventResult.handled;
           }
@@ -92,23 +94,7 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
   }
 }
 
-/// Creates a [FocusTraversalGroup] with [ReadingOrderTraversalPolicy]
-/// so D-pad navigates predictably through a grid/list left→right, top→bottom.
-class TvGridFocusGroup extends StatelessWidget {
-  final Widget child;
-  const TvGridFocusGroup({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusTraversalGroup(
-      policy: ReadingOrderTraversalPolicy(),
-      child: child,
-    );
-  }
-}
-
-/// Global key event handler that intercepts Media/Back keys for TV remote,
-/// while letting Flutter's native FocusTraversal system handle Arrow keys 1-by-1 cleanly.
+/// Global key event handler that intercepts Media & Back keys for TV remotes.
 class TvKeyboardShortcuts extends StatelessWidget {
   final Widget child;
   final VoidCallback? onBack;
@@ -151,7 +137,7 @@ class TvKeyboardShortcuts extends StatelessWidget {
             return;
           }
 
-          // Back/Escape Remote Buttons
+          // Back / Escape Remote Buttons
           if (key == LogicalKeyboardKey.escape ||
               key == LogicalKeyboardKey.backspace ||
               key == LogicalKeyboardKey.goBack) {

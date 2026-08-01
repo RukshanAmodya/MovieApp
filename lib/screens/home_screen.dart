@@ -444,33 +444,31 @@ class _NetflixMovieRow extends StatelessWidget {
         ),
         SizedBox(
           height: 270,
-          child: TvGridFocusGroup(
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              itemCount: movies.length,
-              itemBuilder: (context, index) {
-                final movie = movies[index];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-                  child: MovieCard(
-                    movie: movie,
-                    width: 150,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        PageRouteBuilder(
-                          pageBuilder: (context, animation, secondaryAnimation) =>
-                              MoviePlayerScreen(movie: movie),
-                          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-                              FadeTransition(opacity: animation, child: child),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            itemCount: movies.length,
+            itemBuilder: (context, index) {
+              final movie = movies[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+                child: MovieCard(
+                  movie: movie,
+                  width: 150,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            MoviePlayerScreen(movie: movie),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                            FadeTransition(opacity: animation, child: child),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ),
       ],
