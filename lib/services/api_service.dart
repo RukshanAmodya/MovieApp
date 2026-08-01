@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String _baseUrl =
-      'https://movieapp.rukshan-amodaya-e.workers.dev';
+      'https://movieapp.agency-digitra.workers.dev';
 
   static const Duration _timeout = Duration(seconds: 12);
 
