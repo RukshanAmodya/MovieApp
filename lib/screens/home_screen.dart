@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/theme.dart';
@@ -285,57 +286,69 @@ class _NetflixHeroBillboard extends StatelessWidget {
                 Row(
                   children: [
                     // Play Button
-                    TvFocusDetector(
-                      autofocus: true,
-                      onSelect: onPlay,
-                      builder: (context, isFocused) {
-                        return GestureDetector(
-                          onTap: onPlay,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 28, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isFocused
-                                  ? RooflixTheme.primary
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: isFocused
-                                  ? [
-                                      BoxShadow(
-                                        color: RooflixTheme.primary
-                                            .withValues(alpha: 0.6),
-                                        blurRadius: 24,
-                                        spreadRadius: 2,
-                                      ),
-                                    ]
-                                  : [],
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.play_arrow_rounded,
-                                  color: isFocused
-                                      ? Colors.white
-                                      : Colors.black,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Play',
-                                  style: GoogleFonts.plusJakartaSans(
+                    Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            FocusScope.of(context)
+                                .focusInDirection(TraversalDirection.left);
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: TvFocusDetector(
+                        autofocus: true,
+                        onSelect: onPlay,
+                        builder: (context, isFocused) {
+                          return GestureDetector(
+                            onTap: onPlay,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 28, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isFocused
+                                    ? RooflixTheme.primary
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: isFocused
+                                    ? [
+                                        BoxShadow(
+                                          color: RooflixTheme.primary
+                                              .withValues(alpha: 0.6),
+                                          blurRadius: 24,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : [],
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.play_arrow_rounded,
                                     color: isFocused
                                         ? Colors.white
                                         : Colors.black,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
+                                    size: 28,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Play',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: isFocused
+                                          ? Colors.white
+                                          : Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
 
                     const SizedBox(width: 14),
