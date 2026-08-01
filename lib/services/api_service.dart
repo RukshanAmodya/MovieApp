@@ -12,7 +12,7 @@ class ApiService {
   static const String _baseUrl =
       'https://movieapp.rukshan-amodaya-e.workers.dev';
 
-  static const Duration _timeout = Duration(seconds: 10);
+  static const Duration _timeout = Duration(seconds: 12);
 
   // ---- Auth Session State ----
   static String? _idToken;
@@ -29,6 +29,19 @@ class ApiService {
   static AuthUser? get currentUser =>
       _idToken != null ? AuthUser(email: _email!, uid: _uid!) : null;
 
+  // ---- Helper for Safe JSON Parsing ----
+  static dynamic _parseResponseBody(http.Response res) {
+    final body = res.body.trim();
+    if (body.isEmpty) {
+      throw Exception('Server returned empty response (Status ${res.statusCode})');
+    }
+    try {
+      return json.decode(body);
+    } catch (_) {
+      throw Exception('Invalid response format (Status ${res.statusCode})');
+    }
+  }
+
   // ---- Auth Methods ----
 
   static Future<AuthUser> signIn(
@@ -41,7 +54,7 @@ class ApiService {
         )
         .timeout(_timeout);
 
-    final data = json.decode(res.body);
+    final data = _parseResponseBody(res);
     if (res.statusCode != 200) {
       throw Exception(data['error'] ?? 'Sign in failed');
     }
@@ -64,7 +77,7 @@ class ApiService {
         )
         .timeout(_timeout);
 
-    final data = json.decode(res.body);
+    final data = _parseResponseBody(res);
     if (res.statusCode != 200) {
       throw Exception(data['error'] ?? 'Sign up failed');
     }
@@ -102,17 +115,16 @@ class ApiService {
         .timeout(_timeout);
 
     if (res.statusCode == 401) {
-      // Token expired — sign out
       await signOut();
       throw Exception('Session expired. Please sign in again.');
     }
 
+    final data = _parseResponseBody(res);
     if (res.statusCode != 200) {
-      final data = json.decode(res.body);
       throw Exception(data['error'] ?? 'Failed to fetch movies');
     }
 
-    return json.decode(res.body) as List<dynamic>;
+    return data as List<dynamic>;
   }
 
   // ---- Health Check ----
