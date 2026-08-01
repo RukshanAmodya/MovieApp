@@ -6,3 +6,4 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 FIREBASE_PROJECT_ID = "rooflix-app"
 FIREBASE_DB_URL = "https://rooflix-app-default-rtdb.firebaseio.com"
+FIREBASE_WEB_API_KEY = "AIzaSyCmJ5RBxdq2WJvnHWkBwTDeeb1qvxVPKkI"
