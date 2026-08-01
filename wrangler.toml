@@ -1,0 +1,8 @@
+name = "rooflix-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+FIREBASE_PROJECT_ID = "rooflix-app"
+FIREBASE_DB_URL = "https://rooflix-app-default-rtdb.firebaseio.com"
