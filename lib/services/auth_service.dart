@@ -1,38 +1,35 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/api_service.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Singleton
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
+  AuthService._internal();
 
-  // Stream of auth changes
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  /// Stream of auth state changes — emits AuthUser? (null = signed out)
+  Stream<AuthUser?> get authStateChanges => ApiService.authStateChanges;
 
-  // Get current user
-  User? get currentUser => _auth.currentUser;
+  /// Currently signed-in user
+  AuthUser? get currentUser => ApiService.currentUser;
 
-  // Sign In with Email & Password
-  Future<UserCredential> signInWithEmail({
+  /// Sign in with email and password
+  Future<AuthUser> signInWithEmail({
     required String email,
     required String password,
   }) async {
-    return await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password.trim(),
-    );
+    return await ApiService.signIn(email: email, password: password);
   }
 
-  // Register with Email & Password
-  Future<UserCredential> signUpWithEmail({
+  /// Register with email and password
+  Future<AuthUser> signUpWithEmail({
     required String email,
     required String password,
   }) async {
-    return await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password.trim(),
-    );
+    return await ApiService.signUp(email: email, password: password);
   }
 
-  // Sign Out
+  /// Sign out
   Future<void> signOut() async {
-    await _auth.signOut();
+    await ApiService.signOut();
   }
 }

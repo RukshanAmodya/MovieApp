@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin manages Kotlin internally.
     id("dev.flutter.flutter-gradle-plugin")
 }

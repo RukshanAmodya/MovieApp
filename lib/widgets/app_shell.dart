@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
 import '../core/focus_helper.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../screens/home_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/auth_screen.dart';
@@ -172,7 +173,7 @@ class _Sidebar extends StatelessWidget {
                       const Spacer(),
 
                       // User footer
-                      StreamBuilder(
+                      StreamBuilder<AuthUser?>(
                         stream: AuthService().authStateChanges,
                         builder: (context, snapshot) {
                           final user = snapshot.data;
@@ -191,9 +192,9 @@ class _Sidebar extends StatelessWidget {
                                   radius: 18,
                                   backgroundColor: RooflixTheme.primaryLight,
                                   child: Text(
-                                    (user.email?.isNotEmpty == true
-                                            ? user.email![0].toUpperCase()
-                                            : 'U'),
+                                    user.email.isNotEmpty
+                                        ? user.email[0].toUpperCase()
+                                        : 'U',
                                     style: GoogleFonts.plusJakartaSans(
                                       color: RooflixTheme.primary,
                                       fontWeight: FontWeight.w700,
@@ -217,7 +218,7 @@ class _Sidebar extends StatelessWidget {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       Text(
-                                        user.email ?? '',
+                                        user.email,
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 11,
                                           color: RooflixTheme.textMuted,
@@ -233,7 +234,7 @@ class _Sidebar extends StatelessWidget {
                         },
                       ),
                       // Sign out button
-                      StreamBuilder(
+                      StreamBuilder<AuthUser?>(
                         stream: AuthService().authStateChanges,
                         builder: (context, snapshot) {
                           final user = snapshot.data;
@@ -452,7 +453,7 @@ class _TopHeaderState extends State<_TopHeader> {
             const Spacer(),
 
             // Auth buttons
-            StreamBuilder(
+            StreamBuilder<AuthUser?>(
               stream: AuthService().authStateChanges,
               builder: (context, snapshot) {
                 final user = snapshot.data;
@@ -461,7 +462,7 @@ class _TopHeaderState extends State<_TopHeader> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        user.email ?? '',
+                        user.email,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           color: RooflixTheme.textSecondary,
@@ -475,8 +476,8 @@ class _TopHeaderState extends State<_TopHeader> {
                           radius: 18,
                           backgroundColor: RooflixTheme.primaryLight,
                           child: Text(
-                            user.email?.isNotEmpty == true
-                                ? user.email![0].toUpperCase()
+                            user.email.isNotEmpty
+                                ? user.email[0].toUpperCase()
                                 : 'U',
                             style: GoogleFonts.plusJakartaSans(
                               color: RooflixTheme.primary,

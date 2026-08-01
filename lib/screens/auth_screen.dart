@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -78,7 +79,7 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    return StreamBuilder<AuthUser?>(
       stream: AuthService().authStateChanges,
       builder: (context, snapshot) {
         final user = snapshot.data;
@@ -86,7 +87,7 @@ class _AuthScreenState extends State<AuthScreen>
         if (user != null) {
           // Logged-in state
           return _LoggedInView(
-            email: user.email ?? '',
+            email: user.email,
             displayName: user.displayName,
             onSignOut: () async => await AuthService().signOut(),
           );
