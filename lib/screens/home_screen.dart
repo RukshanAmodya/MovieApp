@@ -456,6 +456,7 @@ class _NetflixMovieRow extends StatelessWidget {
                 child: MovieCard(
                   movie: movie,
                   width: 150,
+                  isFirstInRow: index == 0,
                   onTap: () {
                     Navigator.of(context).push(
                       PageRouteBuilder(

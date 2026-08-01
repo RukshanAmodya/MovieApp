@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/movie.dart';
@@ -411,18 +412,83 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // 1. Progress Bar
-                                  ValueListenableBuilder(
-                                    valueListenable: _controller,
-                                    builder: (context, VideoPlayerValue value, child) {
-                                      return VideoProgressIndicator(
-                                        _controller,
-                                        allowScrubbing: true,
-                                        padding: const EdgeInsets.symmetric(vertical: 4),
-                                        colors: const VideoProgressColors(
-                                          playedColor: RooflixTheme.primary,
-                                          bufferedColor: Colors.white30,
-                                          backgroundColor: Colors.white12,
+                                  // 1. D-Pad Navigable Progress Scrub Bar
+                                  TvFocusDetector(
+                                    onSelect: _togglePlayPause,
+                                    builder: (context, isFocused) {
+                                      return Focus(
+                                        onKeyEvent: (node, event) {
+                                          if (event is KeyDownEvent) {
+                                            final key = event.logicalKey;
+                                            if (key == LogicalKeyboardKey.arrowLeft) {
+                                              _seekRelative(const Duration(seconds: -10));
+                                              return KeyEventResult.handled;
+                                            }
+                                            if (key == LogicalKeyboardKey.arrowRight) {
+                                              _seekRelative(const Duration(seconds: 10));
+                                              return KeyEventResult.handled;
+                                            }
+                                          }
+                                          return KeyEventResult.ignored;
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 180),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isFocused
+                                                ? RooflixTheme.primary.withValues(alpha: 0.15)
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: isFocused
+                                                  ? RooflixTheme.primary
+                                                  : Colors.transparent,
+                                              width: isFocused ? 2.0 : 0.0,
+                                            ),
+                                            boxShadow: isFocused
+                                                ? [
+                                                    BoxShadow(
+                                                      color: RooflixTheme.primary
+                                                          .withValues(alpha: 0.5),
+                                                      blurRadius: 16,
+                                                    ),
+                                                  ]
+                                                : [],
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              ValueListenableBuilder(
+                                                valueListenable: _controller,
+                                                builder: (context, VideoPlayerValue value, child) {
+                                                  return VideoProgressIndicator(
+                                                    _controller,
+                                                    allowScrubbing: true,
+                                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                                    colors: VideoProgressColors(
+                                                      playedColor: RooflixTheme.primary,
+                                                      bufferedColor: Colors.white30,
+                                                      backgroundColor:
+                                                          isFocused ? Colors.white24 : Colors.white12,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              if (isFocused)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 4),
+                                                  child: Text(
+                                                    '◄ Use Left / Right D-Pad to Seek 10s ►',
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      color: Colors.white,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w800,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
                                         ),
                                       );
                                     },

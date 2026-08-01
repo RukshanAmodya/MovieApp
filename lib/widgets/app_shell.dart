@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
 import '../core/focus_helper.dart';
@@ -322,63 +323,84 @@ class _RailItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TvFocusDetector(
-      onSelect: onTap,
-      builder: (context, isFocused) {
-        final highlighted = isActive || isFocused;
-
-        return GestureDetector(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: isFocused
-                  ? RooflixTheme.primary
-                  : (isActive
-                      ? RooflixTheme.primary.withValues(alpha: 0.15)
-                      : Colors.transparent),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: isFocused
-                  ? [
-                      BoxShadow(
-                        color: RooflixTheme.primary.withValues(alpha: 0.5),
-                        blurRadius: 16,
-                      ),
-                    ]
-                  : [],
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 24,
-                  color: isFocused
-                      ? Colors.white
-                      : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
-                ),
-                if (isExpanded) ...[
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
-                        color: isFocused
-                            ? Colors.white
-                            : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.space ||
+              key == LogicalKeyboardKey.gameButtonA ||
+              key == LogicalKeyboardKey.numpadEnter) {
+            onTap();
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowRight) {
+            FocusScope.of(context).focusInDirection(TraversalDirection.right);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
       },
+      child: TvFocusDetector(
+        autoScroll: false,
+        onSelect: onTap,
+        builder: (context, isFocused) {
+          final highlighted = isActive || isFocused;
+
+          return GestureDetector(
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: isFocused
+                    ? RooflixTheme.primary
+                    : (isActive
+                        ? RooflixTheme.primary.withValues(alpha: 0.15)
+                        : Colors.transparent),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: isFocused
+                    ? [
+                        BoxShadow(
+                          color: RooflixTheme.primary.withValues(alpha: 0.5),
+                          blurRadius: 16,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 24,
+                    color: isFocused
+                        ? Colors.white
+                        : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
+                  ),
+                  if (isExpanded) ...[
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
+                          color: isFocused
+                              ? Colors.white
+                              : (isActive ? RooflixTheme.primary : RooflixTheme.textSecondary),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
