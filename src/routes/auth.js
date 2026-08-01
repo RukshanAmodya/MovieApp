@@ -7,10 +7,11 @@
 const FIREBASE_AUTH_BASE = 'https://identitytoolkit.googleapis.com/v1/accounts';
 
 /**
- * Get Firebase Web API key from env
+ * Get clean Firebase Web API key from env (handles fallback and whitespace)
  */
 function getApiKey(env) {
-  return env.FIREBASE_WEB_API_KEY;
+  const key = env.FIREBASE_WEB_API_KEY ?? 'AIzaSyCmJ5RBxdq2WJvnHWkBwTDeeb1qvxVPKkI';
+  return key.trim().split(' ')[0];
 }
 
 /**
