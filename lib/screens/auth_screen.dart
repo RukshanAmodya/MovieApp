@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
+import '../core/focus_helper.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 
@@ -15,6 +17,8 @@ class _AuthScreenState extends State<AuthScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FocusNode _emailFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -35,6 +39,8 @@ class _AuthScreenState extends State<AuthScreen>
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     _animController.dispose();
     super.dispose();
   }
@@ -99,7 +105,7 @@ class _AuthScreenState extends State<AuthScreen>
           padding: const EdgeInsets.all(24),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -117,7 +123,7 @@ class _AuthScreenState extends State<AuthScreen>
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: RooflixTheme.primary.withValues(alpha: 0.3),
+                                color: RooflixTheme.primary.withValues(alpha: 0.5),
                                 blurRadius: 20,
                                 offset: const Offset(0, 8),
                               ),
@@ -134,8 +140,8 @@ class _AuthScreenState extends State<AuthScreen>
                           _isLogin ? 'Welcome back' : 'Join RooFlix',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: RooflixTheme.textPrimary,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
                             letterSpacing: -0.5,
                           ),
                         ),
@@ -155,13 +161,14 @@ class _AuthScreenState extends State<AuthScreen>
                   ),
                   const SizedBox(height: 36),
 
-                  // Card
+                  // Card Container
                   Container(
-                    padding: const EdgeInsets.all(28),
+                    padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
                       color: RooflixTheme.surface,
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.1)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.6),
@@ -180,7 +187,9 @@ class _AuthScreenState extends State<AuthScreen>
                             decoration: BoxDecoration(
                               color: const Color(0x33E50914),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: RooflixTheme.primary.withValues(alpha: 0.4)),
+                              border: Border.all(
+                                  color: RooflixTheme.primary
+                                      .withValues(alpha: 0.4)),
                             ),
                             child: Row(
                               children: [
@@ -208,7 +217,8 @@ class _AuthScreenState extends State<AuthScreen>
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: RooflixTheme.primary.withValues(alpha: 0.15),
+                              color: RooflixTheme.primary
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                   color: RooflixTheme.primary
@@ -233,129 +243,281 @@ class _AuthScreenState extends State<AuthScreen>
                           const SizedBox(height: 20),
                         ],
 
-                        // Email
+                        // Email Field with D-Pad focus & left arrow transition
                         _FieldLabel('Email address'),
                         const SizedBox(height: 8),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: RooflixTheme.textPrimary),
-                          decoration: _inputDecoration(
-                            hint: 'you@example.com',
-                            icon: Icons.email_outlined,
-                          ),
+                        TvFocusDetector(
+                          focusNode: _emailFocusNode,
+                          autofocus: true,
+                          builder: (context, isFocused) {
+                            return Focus(
+                              onKeyEvent: (node, event) {
+                                if (event is KeyDownEvent) {
+                                  if (event.logicalKey ==
+                                      LogicalKeyboardKey.arrowLeft) {
+                                    FocusScope.of(context).focusInDirection(
+                                        TraversalDirection.left);
+                                    return KeyEventResult.handled;
+                                  }
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                decoration: BoxDecoration(
+                                  color: RooflixTheme.surfaceSecondary,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isFocused
+                                        ? RooflixTheme.primary
+                                        : Colors.white.withValues(alpha: 0.12),
+                                    width: isFocused ? 2.5 : 1.0,
+                                  ),
+                                  boxShadow: isFocused
+                                      ? [
+                                          BoxShadow(
+                                            color: RooflixTheme.primary
+                                                .withValues(alpha: 0.5),
+                                            blurRadius: 18,
+                                            spreadRadius: 2,
+                                          ),
+                                        ]
+                                      : [],
+                                ),
+                                child: TextField(
+                                  controller: _emailController,
+                                  focusNode: _emailFocusNode,
+                                  keyboardType: TextInputType.emailAddress,
+                                  style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white),
+                                  decoration: InputDecoration(
+                                    hintText: 'you@example.com',
+                                    hintStyle: GoogleFonts.plusJakartaSans(
+                                        color: RooflixTheme.textMuted,
+                                        fontSize: 14),
+                                    prefixIcon: const Icon(Icons.email_outlined,
+                                        color: RooflixTheme.textMuted, size: 20),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 14),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 20),
 
-                        // Password
+                        // Password Field with D-Pad focus & left arrow transition
                         _FieldLabel('Password'),
                         const SizedBox(height: 8),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          onSubmitted: (_) => _submit(),
-                          style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: RooflixTheme.textPrimary),
-                          decoration: _inputDecoration(
-                            hint: '••••••••',
-                            icon: Icons.lock_outline_rounded,
-                          ).copyWith(
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color: RooflixTheme.textMuted,
-                                size: 20,
+                        TvFocusDetector(
+                          focusNode: _passwordFocusNode,
+                          builder: (context, isFocused) {
+                            return Focus(
+                              onKeyEvent: (node, event) {
+                                if (event is KeyDownEvent) {
+                                  if (event.logicalKey ==
+                                      LogicalKeyboardKey.arrowLeft) {
+                                    FocusScope.of(context).focusInDirection(
+                                        TraversalDirection.left);
+                                    return KeyEventResult.handled;
+                                  }
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                decoration: BoxDecoration(
+                                  color: RooflixTheme.surfaceSecondary,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isFocused
+                                        ? RooflixTheme.primary
+                                        : Colors.white.withValues(alpha: 0.12),
+                                    width: isFocused ? 2.5 : 1.0,
+                                  ),
+                                  boxShadow: isFocused
+                                      ? [
+                                          BoxShadow(
+                                            color: RooflixTheme.primary
+                                                .withValues(alpha: 0.5),
+                                            blurRadius: 18,
+                                            spreadRadius: 2,
+                                          ),
+                                        ]
+                                      : [],
+                                ),
+                                child: TextField(
+                                  controller: _passwordController,
+                                  focusNode: _passwordFocusNode,
+                                  obscureText: _obscurePassword,
+                                  onSubmitted: (_) => _submit(),
+                                  style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white),
+                                  decoration: InputDecoration(
+                                    hintText: '••••••••',
+                                    hintStyle: GoogleFonts.plusJakartaSans(
+                                        color: RooflixTheme.textMuted,
+                                        fontSize: 14),
+                                    prefixIcon: const Icon(
+                                        Icons.lock_outline_rounded,
+                                        color: RooflixTheme.textMuted,
+                                        size: 20),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                        color: RooflixTheme.textMuted,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => setState(() =>
+                                          _obscurePassword =
+                                              !_obscurePassword),
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 14),
+                                  ),
+                                ),
                               ),
-                              onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 28),
 
-                        // Submit button
-                        SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _submit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: RooflixTheme.primary,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor:
-                                  RooflixTheme.primary.withValues(alpha: 0.5),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16)),
-                              elevation: 0,
-                              shadowColor:
-                                  RooflixTheme.primary.withValues(alpha: 0.3),
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : Text(
-                                    _isLogin ? 'Sign In' : 'Create Account',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                        // Submit Button with D-Pad focus & left arrow transition
+                        TvFocusDetector(
+                          onSelect: _isLoading ? null : _submit,
+                          builder: (context, isFocused) {
+                            return Focus(
+                              onKeyEvent: (node, event) {
+                                if (event is KeyDownEvent) {
+                                  if (event.logicalKey ==
+                                      LogicalKeyboardKey.arrowLeft) {
+                                    FocusScope.of(context).focusInDirection(
+                                        TraversalDirection.left);
+                                    return KeyEventResult.handled;
+                                  }
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: RooflixTheme.primary,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isFocused
+                                        ? Colors.white
+                                        : Colors.transparent,
+                                    width: isFocused ? 2.5 : 0.0,
                                   ),
-                          ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: RooflixTheme.primary.withValues(
+                                          alpha: isFocused ? 0.6 : 0.3),
+                                      blurRadius: isFocused ? 24 : 12,
+                                      spreadRadius: isFocused ? 2 : 0,
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _isLoading ? null : _submit,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(16)),
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Colors.white),
+                                          ),
+                                        )
+                                      : Text(
+                                          _isLogin
+                                              ? 'Sign In'
+                                              : 'Create Account',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Mode toggle
+                        TvFocusDetector(
+                          onSelect: () {
+                            setState(() {
+                              _isLogin = !_isLogin;
+                              _errorMessage = null;
+                              _successMessage = null;
+                            });
+                          },
+                          builder: (context, isFocused) {
+                            return TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isLogin = !_isLogin;
+                                  _errorMessage = null;
+                                  _successMessage = null;
+                                });
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: isFocused
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : Colors.transparent,
+                              ),
+                              child: RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 14),
+                                  children: [
+                                    TextSpan(
+                                      text: _isLogin
+                                          ? "Don't have an account? "
+                                          : 'Already have an account? ',
+                                      style: TextStyle(
+                                          color: RooflixTheme.textSecondary),
+                                    ),
+                                    TextSpan(
+                                      text: _isLogin ? 'Sign Up' : 'Sign In',
+                                      style: const TextStyle(
+                                        color: RooflixTheme.primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Toggle
-                  Center(
-                    child: TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _isLogin = !_isLogin;
-                          _errorMessage = null;
-                          _successMessage = null;
-                        });
-                      },
-                      style: TextButton.styleFrom(
-                          foregroundColor: RooflixTheme.textSecondary),
-                      child: RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              color: RooflixTheme.textSecondary),
-                          children: [
-                            TextSpan(
-                              text: _isLogin
-                                  ? "Don't have an account? "
-                                  : 'Already have an account? ',
-                            ),
-                            TextSpan(
-                              text: _isLogin ? 'Sign Up' : 'Sign In',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: RooflixTheme.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -364,55 +526,7 @@ class _AuthScreenState extends State<AuthScreen>
       },
     );
   }
-
-  InputDecoration _inputDecoration({
-    required String hint,
-    required IconData icon,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: GoogleFonts.plusJakartaSans(
-          color: RooflixTheme.textMuted, fontSize: 14),
-      prefixIcon: Icon(icon, color: RooflixTheme.textMuted, size: 20),
-      filled: true,
-      fillColor: RooflixTheme.surfaceSecondary,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: RooflixTheme.separator, width: 1)),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide:
-              BorderSide(color: RooflixTheme.primary, width: 2)),
-    );
-  }
 }
-
-class _FieldLabel extends StatelessWidget {
-  final String text;
-  const _FieldLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: RooflixTheme.textPrimary,
-        letterSpacing: 0.1,
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Logged-in state view
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _LoggedInView extends StatelessWidget {
   final String email;
@@ -421,18 +535,21 @@ class _LoggedInView extends StatelessWidget {
 
   const _LoggedInView({
     required this.email,
-    required this.displayName,
+    this.displayName,
     required this.onSignOut,
   });
 
   @override
   Widget build(BuildContext context) {
-    final initials = email.isNotEmpty ? email[0].toUpperCase() : 'U';
+    final initials = displayName != null && displayName!.isNotEmpty
+        ? displayName!.substring(0, 1).toUpperCase()
+        : email.substring(0, 1).toUpperCase();
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 380),
+          constraints: const BoxConstraints(maxWidth: 420),
           child: Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
@@ -442,8 +559,8 @@ class _LoggedInView extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.6),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
@@ -451,13 +568,13 @@ class _LoggedInView extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircleAvatar(
-                  radius: 40,
-                  backgroundColor: RooflixTheme.primaryLight,
+                  radius: 44,
+                  backgroundColor: RooflixTheme.primary.withValues(alpha: 0.2),
                   child: Text(
                     initials,
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
                       color: RooflixTheme.primary,
                     ),
                   ),
@@ -466,9 +583,9 @@ class _LoggedInView extends StatelessWidget {
                 Text(
                   displayName ?? 'User',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: RooflixTheme.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -484,37 +601,100 @@ class _LoggedInView extends StatelessWidget {
                 // Stats row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _StatChip(label: 'Member', value: '✓'),
-                    const SizedBox(width: 12),
-                    _StatChip(label: 'Plan', value: 'Free'),
+                  children: const [
+                    _StatChip(label: 'Status', value: 'Active'),
+                    SizedBox(width: 12),
+                    _StatChip(label: 'Plan', value: 'RooFlix VIP'),
                   ],
                 ),
                 const SizedBox(height: 32),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: onSignOut,
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: Text(
-                      'Sign Out',
-                      style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.w700),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red.shade500,
-                      side: BorderSide(color: Colors.red.shade200),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
+                // Sign Out Button with D-Pad focus & left arrow transition
+                TvFocusDetector(
+                  autofocus: true,
+                  onSelect: onSignOut,
+                  builder: (context, isFocused) {
+                    return Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            FocusScope.of(context)
+                                .focusInDirection(TraversalDirection.left);
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: double.infinity,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: isFocused
+                              ? RooflixTheme.primary
+                              : Colors.red.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isFocused
+                                ? Colors.white
+                                : Colors.red.withValues(alpha: 0.4),
+                            width: isFocused ? 2.5 : 1.0,
+                          ),
+                          boxShadow: isFocused
+                              ? [
+                                  BoxShadow(
+                                    color: RooflixTheme.primary
+                                        .withValues(alpha: 0.5),
+                                    blurRadius: 20,
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: OutlinedButton.icon(
+                          onPressed: onSignOut,
+                          icon: Icon(Icons.logout_rounded,
+                              size: 20,
+                              color: isFocused ? Colors.white : Colors.red.shade400),
+                          label: Text(
+                            'Sign Out',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: isFocused ? Colors.white : Colors.red.shade400,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String label;
+  const _FieldLabel(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: Colors.white70,
       ),
     );
   }
@@ -528,11 +708,11 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: RooflixTheme.surfaceSecondary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: RooflixTheme.separator),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -540,7 +720,7 @@ class _StatChip extends StatelessWidget {
             value,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 16,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
               color: RooflixTheme.primary,
             ),
           ),
