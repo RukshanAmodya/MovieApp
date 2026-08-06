@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme.dart';
-import '../core/focus_helper.dart';
 import '../models/movie.dart';
 import '../services/movie_service.dart';
 import '../widgets/movie_card.dart';
@@ -93,106 +92,64 @@ class _SearchScreenState extends State<SearchScreen> {
                 const SizedBox(height: 18),
 
                 // Search bar with full D-Pad key handling
-                TvFocusDetector(
-                  focusNode: _searchFocusNode,
-                  autofocus: true,
-                  autoScroll: false,
-                  onSelect: () => _searchFocusNode.requestFocus(),
-                  builder: (context, isFocused) {
-                    return KeyboardListener(
-                      focusNode: FocusNode(skipTraversal: true),
-                      onKeyEvent: (event) {
-                        if (event is KeyDownEvent) {
-                          final key = event.logicalKey;
-
-                          // Left arrow → back to sidebar
-                          if (key == LogicalKeyboardKey.arrowLeft) {
-                            _searchFocusNode.unfocus();
-                            sidebarScope.requestFocus();
-                            return;
-                          }
-
-                          // Right arrow → unfocus search bar and go to first card
-                          if (key == LogicalKeyboardKey.arrowRight) {
-                            _searchFocusNode.unfocus();
-                            // Focus first result card (if any)
-                            if (_results.isNotEmpty) {
-                              WidgetsBinding.instance
-                                  .addPostFrameCallback((_) {
-                                _firstCardFocusNode.requestFocus();
-                              });
-                            }
-                            return;
-                          }
-
-                          // Down arrow → go to first card in grid
-                          if (key == LogicalKeyboardKey.arrowDown) {
-                            _searchFocusNode.unfocus();
-                            if (_results.isNotEmpty) {
-                              WidgetsBinding.instance
-                                  .addPostFrameCallback((_) {
-                                _firstCardFocusNode.requestFocus();
-                              });
-                            }
-                            return;
-                          }
-                        }
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        decoration: BoxDecoration(
-                          color: RooflixTheme.surfaceSecondary,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isFocused
-                                ? RooflixTheme.primary
-                                : Colors.white.withValues(alpha: 0.12),
-                            width: isFocused ? 2.5 : 1.0,
-                          ),
-                          boxShadow: isFocused
-                              ? [
-                                  BoxShadow(
-                                    color: RooflixTheme.primary
-                                        .withValues(alpha: 0.5),
-                                    blurRadius: 20,
-                                    spreadRadius: 2,
-                                  ),
-                                ]
-                              : [],
+                ListenableBuilder(
+                  listenable: _searchFocusNode,
+                  builder: (context, child) {
+                    final isFocused = _searchFocusNode.hasFocus;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      decoration: BoxDecoration(
+                        color: RooflixTheme.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isFocused
+                              ? RooflixTheme.primary
+                              : Colors.white.withValues(alpha: 0.12),
+                          width: isFocused ? 2.5 : 1.0,
                         ),
-                        child: TextField(
-                          controller: _controller,
-                          focusNode: _searchFocusNode,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                        boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: RooflixTheme.primary
+                                      .withValues(alpha: 0.5),
+                                  blurRadius: 20,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : [],
+                      ),
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _searchFocusNode,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search movies, titles, genres...',
+                          hintStyle: GoogleFonts.plusJakartaSans(
+                            color: RooflixTheme.textMuted,
+                            fontSize: 15,
                           ),
-                          decoration: InputDecoration(
-                            hintText: 'Search movies, titles, genres...',
-                            hintStyle: GoogleFonts.plusJakartaSans(
-                              color: RooflixTheme.textMuted,
-                              fontSize: 15,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.search_rounded,
-                              color: RooflixTheme.primary,
-                              size: 24,
-                            ),
-                            suffixIcon: _controller.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.close_rounded,
-                                        color: Colors.white70),
-                                    onPressed: () {
-                                      _controller.clear();
-                                      _onSearch();
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 16),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: RooflixTheme.primary,
+                            size: 24,
                           ),
+                          suffixIcon: _controller.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close_rounded,
+                                      color: Colors.white70),
+                                  onPressed: () {
+                                    _controller.clear();
+                                    _onSearch();
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 16),
                         ),
                       ),
                     );
@@ -307,8 +264,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   final isFirstInRow = (index % crossAxisCount) == 0;
                   final isFirst = index == 0;
 
-                  return Focus(
-                    // Only assign the tracked first-card node to index 0
+                  return MovieCard(
+                    movie: movie,
+                    isFirstInRow: isFirstInRow,
                     focusNode: isFirst ? _firstCardFocusNode : null,
                     onKeyEvent: (node, event) {
                       if (event is KeyDownEvent) {
@@ -330,25 +288,20 @@ class _SearchScreenState extends State<SearchScreen> {
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: MovieCard(
-                      movie: movie,
-                      isFirstInRow: isFirstInRow,
-                      focusNode: isFirst ? _firstCardFocusNode : null,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          PageRouteBuilder(
-                            pageBuilder: (context, anim, secondaryAnim) =>
-                                MoviePlayerScreen(movie: movie),
-                            transitionsBuilder:
-                                (context, anim, secondaryAnim, child) =>
-                                    FadeTransition(
-                                        opacity: anim, child: child),
-                            transitionDuration:
-                                const Duration(milliseconds: 250),
-                          ),
-                        );
-                      },
-                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder: (context, anim, secondaryAnim) =>
+                              MoviePlayerScreen(movie: movie),
+                          transitionsBuilder:
+                              (context, anim, secondaryAnim, child) =>
+                                  FadeTransition(
+                                      opacity: anim, child: child),
+                          transitionDuration:
+                              const Duration(milliseconds: 250),
+                        ),
+                      );
+                    },
                   );
                 },
                 childCount: _results.length,

@@ -246,63 +246,50 @@ class _AuthScreenState extends State<AuthScreen>
                         // Email Field with D-Pad focus & left arrow transition
                         _FieldLabel('Email address'),
                         const SizedBox(height: 8),
-                        TvFocusDetector(
-                          focusNode: _emailFocusNode,
-                          autofocus: true,
-                          builder: (context, isFocused) {
-                            return Focus(
-                              onKeyEvent: (node, event) {
-                                if (event is KeyDownEvent) {
-                                  if (event.logicalKey ==
-                                      LogicalKeyboardKey.arrowLeft) {
-                                    FocusScope.of(context).focusInDirection(
-                                        TraversalDirection.left);
-                                    return KeyEventResult.handled;
-                                  }
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                decoration: BoxDecoration(
-                                  color: RooflixTheme.surfaceSecondary,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isFocused
-                                        ? RooflixTheme.primary
-                                        : Colors.white.withValues(alpha: 0.12),
-                                    width: isFocused ? 2.5 : 1.0,
-                                  ),
-                                  boxShadow: isFocused
-                                      ? [
-                                          BoxShadow(
-                                            color: RooflixTheme.primary
-                                                .withValues(alpha: 0.5),
-                                            blurRadius: 18,
-                                            spreadRadius: 2,
-                                          ),
-                                        ]
-                                      : [],
+                        ListenableBuilder(
+                          listenable: _emailFocusNode,
+                          builder: (context, child) {
+                            final isFocused = _emailFocusNode.hasFocus;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              decoration: BoxDecoration(
+                                color: RooflixTheme.surfaceSecondary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isFocused
+                                      ? RooflixTheme.primary
+                                      : Colors.white.withValues(alpha: 0.12),
+                                  width: isFocused ? 2.5 : 1.0,
                                 ),
-                                child: TextField(
-                                  controller: _emailController,
-                                  focusNode: _emailFocusNode,
-                                  keyboardType: TextInputType.emailAddress,
-                                  style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.white),
-                                  decoration: InputDecoration(
-                                    hintText: 'you@example.com',
-                                    hintStyle: GoogleFonts.plusJakartaSans(
-                                        color: RooflixTheme.textMuted,
-                                        fontSize: 14),
-                                    prefixIcon: const Icon(Icons.email_outlined,
-                                        color: RooflixTheme.textMuted, size: 20),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 14),
-                                  ),
+                                boxShadow: isFocused
+                                    ? [
+                                        BoxShadow(
+                                          color: RooflixTheme.primary
+                                              .withValues(alpha: 0.5),
+                                          blurRadius: 18,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : [],
+                              ),
+                              child: TextField(
+                                controller: _emailController,
+                                focusNode: _emailFocusNode,
+                                keyboardType: TextInputType.emailAddress,
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white),
+                                decoration: InputDecoration(
+                                  hintText: 'you@example.com',
+                                  hintStyle: GoogleFonts.plusJakartaSans(
+                                      color: RooflixTheme.textMuted,
+                                      fontSize: 14),
+                                  prefixIcon: const Icon(Icons.email_outlined,
+                                      color: RooflixTheme.textMuted, size: 20),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
                                 ),
                               ),
                             );
@@ -313,77 +300,65 @@ class _AuthScreenState extends State<AuthScreen>
                         // Password Field with D-Pad focus & left arrow transition
                         _FieldLabel('Password'),
                         const SizedBox(height: 8),
-                        TvFocusDetector(
-                          focusNode: _passwordFocusNode,
-                          builder: (context, isFocused) {
-                            return Focus(
-                              onKeyEvent: (node, event) {
-                                if (event is KeyDownEvent) {
-                                  if (event.logicalKey ==
-                                      LogicalKeyboardKey.arrowLeft) {
-                                    FocusScope.of(context).focusInDirection(
-                                        TraversalDirection.left);
-                                    return KeyEventResult.handled;
-                                  }
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                decoration: BoxDecoration(
-                                  color: RooflixTheme.surfaceSecondary,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isFocused
-                                        ? RooflixTheme.primary
-                                        : Colors.white.withValues(alpha: 0.12),
-                                    width: isFocused ? 2.5 : 1.0,
-                                  ),
-                                  boxShadow: isFocused
-                                      ? [
-                                          BoxShadow(
-                                            color: RooflixTheme.primary
-                                                .withValues(alpha: 0.5),
-                                            blurRadius: 18,
-                                            spreadRadius: 2,
-                                          ),
-                                        ]
-                                      : [],
+                        ListenableBuilder(
+                          listenable: _passwordFocusNode,
+                          builder: (context, child) {
+                            final isFocused = _passwordFocusNode.hasFocus;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              decoration: BoxDecoration(
+                                color: RooflixTheme.surfaceSecondary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isFocused
+                                      ? RooflixTheme.primary
+                                      : Colors.white.withValues(alpha: 0.12),
+                                  width: isFocused ? 2.5 : 1.0,
                                 ),
-                                child: TextField(
-                                  controller: _passwordController,
-                                  focusNode: _passwordFocusNode,
-                                  obscureText: _obscurePassword,
-                                  onSubmitted: (_) => _submit(),
-                                  style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.white),
-                                  decoration: InputDecoration(
-                                    hintText: '••••••••',
-                                    hintStyle: GoogleFonts.plusJakartaSans(
-                                        color: RooflixTheme.textMuted,
-                                        fontSize: 14),
-                                    prefixIcon: const Icon(
-                                        Icons.lock_outline_rounded,
-                                        color: RooflixTheme.textMuted,
-                                        size: 20),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility_outlined
-                                            : Icons.visibility_off_outlined,
-                                        color: RooflixTheme.textMuted,
-                                        size: 20,
-                                      ),
-                                      onPressed: () => setState(() =>
-                                          _obscurePassword =
-                                              !_obscurePassword),
+                                boxShadow: isFocused
+                                    ? [
+                                        BoxShadow(
+                                          color: RooflixTheme.primary
+                                              .withValues(alpha: 0.5),
+                                          blurRadius: 18,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : [],
+                              ),
+                              child: TextField(
+                                controller: _passwordController,
+                                focusNode: _passwordFocusNode,
+                                obscureText: _obscurePassword,
+                                onSubmitted: (_) => _submit(),
+                                style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white),
+                                decoration: InputDecoration(
+                                  hintText: '••••••••',
+                                  hintStyle: GoogleFonts.plusJakartaSans(
+                                      color: RooflixTheme.textMuted,
+                                      fontSize: 14),
+                                  prefixIcon: const Icon(
+                                      Icons.lock_outline_rounded,
+                                      color: RooflixTheme.textMuted,
+                                      size: 20),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: RooflixTheme.textMuted,
+                                      size: 20,
                                     ),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 14),
+                                    onPressed: () => setState(() =>
+                                        _obscurePassword =
+                                            !_obscurePassword),
                                   ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
                                 ),
                               ),
                             );
@@ -394,72 +369,70 @@ class _AuthScreenState extends State<AuthScreen>
                         // Submit Button with D-Pad focus & left arrow transition
                         TvFocusDetector(
                           onSelect: _isLoading ? null : _submit,
+                          onKeyEvent: (node, event) {
+                            if (event is KeyDownEvent) {
+                              if (event.logicalKey ==
+                                  LogicalKeyboardKey.arrowLeft) {
+                                FocusScope.of(context).focusInDirection(
+                                    TraversalDirection.left);
+                                return KeyEventResult.handled;
+                              }
+                            }
+                            return KeyEventResult.ignored;
+                          },
                           builder: (context, isFocused) {
-                            return Focus(
-                              onKeyEvent: (node, event) {
-                                if (event is KeyDownEvent) {
-                                  if (event.logicalKey ==
-                                      LogicalKeyboardKey.arrowLeft) {
-                                    FocusScope.of(context).focusInDirection(
-                                        TraversalDirection.left);
-                                    return KeyEventResult.handled;
-                                  }
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  color: RooflixTheme.primary,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isFocused
-                                        ? Colors.white
-                                        : Colors.transparent,
-                                    width: isFocused ? 2.5 : 0.0,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: RooflixTheme.primary.withValues(
-                                          alpha: isFocused ? 0.6 : 0.3),
-                                      blurRadius: isFocused ? 24 : 12,
-                                      spreadRadius: isFocused ? 2 : 0,
-                                    ),
-                                  ],
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: RooflixTheme.primary,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isFocused
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  width: isFocused ? 2.5 : 0.0,
                                 ),
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _submit,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    foregroundColor: Colors.white,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: RooflixTheme.primary.withValues(
+                                        alpha: isFocused ? 0.6 : 0.3),
+                                    blurRadius: isFocused ? 24 : 12,
+                                    spreadRadius: isFocused ? 2 : 0,
                                   ),
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                    Colors.white),
-                                          ),
-                                        )
-                                      : Text(
-                                          _isLogin
-                                              ? 'Sign In'
-                                              : 'Create Account',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                          ),
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _submit,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(16)),
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Colors.white),
                                         ),
-                                ),
+                                      )
+                                    : Text(
+                                        _isLogin
+                                            ? 'Sign In'
+                                            : 'Create Account',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                               ),
                             );
                           },
@@ -613,62 +586,60 @@ class _LoggedInView extends StatelessWidget {
                 TvFocusDetector(
                   autofocus: true,
                   onSelect: onSignOut,
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent) {
+                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        FocusScope.of(context)
+                            .focusInDirection(TraversalDirection.left);
+                        return KeyEventResult.handled;
+                      }
+                    }
+                    return KeyEventResult.ignored;
+                  },
                   builder: (context, isFocused) {
-                    return Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                            FocusScope.of(context)
-                                .focusInDirection(TraversalDirection.left);
-                            return KeyEventResult.handled;
-                          }
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        width: double.infinity,
-                        height: 50,
-                        decoration: BoxDecoration(
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: isFocused
+                            ? RooflixTheme.primary
+                            : Colors.red.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
                           color: isFocused
-                              ? RooflixTheme.primary
-                              : Colors.red.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isFocused
-                                ? Colors.white
-                                : Colors.red.withValues(alpha: 0.4),
-                            width: isFocused ? 2.5 : 1.0,
-                          ),
-                          boxShadow: isFocused
-                              ? [
-                                  BoxShadow(
-                                    color: RooflixTheme.primary
-                                        .withValues(alpha: 0.5),
-                                    blurRadius: 20,
-                                  ),
-                                ]
-                              : [],
+                              ? Colors.white
+                              : Colors.red.withValues(alpha: 0.4),
+                          width: isFocused ? 2.5 : 1.0,
                         ),
-                        child: OutlinedButton.icon(
-                          onPressed: onSignOut,
-                          icon: Icon(Icons.logout_rounded,
-                              size: 20,
-                              color: isFocused ? Colors.white : Colors.red.shade400),
-                          label: Text(
-                            'Sign Out',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: isFocused ? Colors.white : Colors.red.shade400,
-                            ),
+                        boxShadow: isFocused
+                            ? [
+                                BoxShadow(
+                                  color: RooflixTheme.primary
+                                      .withValues(alpha: 0.5),
+                                  blurRadius: 20,
+                                ),
+                              ]
+                            : [],
+                      ),
+                      child: OutlinedButton.icon(
+                        onPressed: onSignOut,
+                        icon: Icon(Icons.logout_rounded,
+                            size: 20,
+                            color: isFocused ? Colors.white : Colors.red.shade400),
+                        label: Text(
+                          'Sign Out',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: isFocused ? Colors.white : Colors.red.shade400,
                           ),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            side: BorderSide.none,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16)),
-                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
                         ),
                       ),
                     );

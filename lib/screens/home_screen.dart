@@ -10,7 +10,7 @@ import '../widgets/movie_card.dart';
 import '../widgets/app_shell.dart';
 import 'movie_player_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final ValueChanged<AppPage>? onNavigate;
   final bool filterTrending;
 
@@ -21,9 +21,22 @@ class HomeScreen extends StatelessWidget {
   });
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final Stream<List<Movie>> _moviesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _moviesStream = MovieService().moviesStream();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Movie>>(
-      stream: MovieService().moviesStream(),
+      stream: _moviesStream,
       builder: (context, snapshot) {
         final isLoading =
             snapshot.connectionState == ConnectionState.waiting;
@@ -545,9 +558,11 @@ class _NetflixMovieRowState extends State<_NetflixMovieRow> {
               return Padding(
                 padding:
                     const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-                child: Focus(
+                child: MovieCard(
+                  movie: movie,
+                  width: 150,
+                  isFirstInRow: index == 0,
                   focusNode: _focusNodes[index],
-                  skipTraversal: true, // we handle traversal manually
                   onKeyEvent: (node, event) {
                     if (event is KeyDownEvent) {
                       final key = event.logicalKey;
@@ -606,25 +621,19 @@ class _NetflixMovieRowState extends State<_NetflixMovieRow> {
                     }
                     return KeyEventResult.ignored;
                   },
-                  child: MovieCard(
-                    movie: movie,
-                    width: 150,
-                    isFirstInRow: index == 0,
-                    focusNode: _focusNodes[index],
-                    onTap: () {
-                      Navigator.of(context).push(
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  MoviePlayerScreen(movie: movie),
-                          transitionsBuilder: (context, animation,
-                                  secondaryAnimation, child) =>
-                              FadeTransition(
-                                  opacity: animation, child: child),
-                        ),
-                      );
-                    },
-                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      PageRouteBuilder(
+                        pageBuilder:
+                            (context, animation, secondaryAnimation) =>
+                                MoviePlayerScreen(movie: movie),
+                        transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) =>
+                            FadeTransition(
+                                opacity: animation, child: child),
+                      ),
+                    );
+                  },
                 ),
               );
             },

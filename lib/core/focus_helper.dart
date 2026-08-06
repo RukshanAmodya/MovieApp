@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TvFocusDetector — wraps a widget, reports focus state, handles Select keys
+// TvFocusDetector — wraps a widget, reports focus state, handles Select & D-Pad keys
 // ─────────────────────────────────────────────────────────────────────────────
 
 class TvFocusDetector extends StatefulWidget {
@@ -11,6 +11,7 @@ class TvFocusDetector extends StatefulWidget {
   final FocusNode? focusNode;
   final bool autofocus;
   final bool autoScroll;
+  final KeyEventResult Function(FocusNode node, KeyEvent event)? onKeyEvent;
 
   const TvFocusDetector({
     super.key,
@@ -19,6 +20,7 @@ class TvFocusDetector extends StatefulWidget {
     this.focusNode,
     this.autofocus = false,
     this.autoScroll = true,
+    this.onKeyEvent,
   });
 
   @override
@@ -36,10 +38,26 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
     _focusNode.addListener(_onFocusChange);
   }
 
+  @override
+  void didUpdateWidget(TvFocusDetector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusNode != oldWidget.focusNode) {
+      if (oldWidget.focusNode == null) {
+        _focusNode.dispose();
+      } else {
+        _focusNode.removeListener(_onFocusChange);
+      }
+      _focusNode = widget.focusNode ?? FocusNode();
+      _focusNode.addListener(_onFocusChange);
+    }
+  }
+
   void _onFocusChange() {
     if (mounted) {
       final hasFocus = _focusNode.hasFocus;
-      setState(() => _isFocused = hasFocus);
+      if (_isFocused != hasFocus) {
+        setState(() => _isFocused = hasFocus);
+      }
 
       if (hasFocus && widget.autoScroll) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -74,6 +92,10 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
       focusNode: _focusNode,
       autofocus: widget.autofocus,
       onKeyEvent: (node, event) {
+        if (widget.onKeyEvent != null) {
+          final res = widget.onKeyEvent!(node, event);
+          if (res != KeyEventResult.ignored) return res;
+        }
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
           if (key == LogicalKeyboardKey.select ||
@@ -81,8 +103,10 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
               key == LogicalKeyboardKey.space ||
               key == LogicalKeyboardKey.gameButtonA ||
               key == LogicalKeyboardKey.numpadEnter) {
-            widget.onSelect?.call();
-            return KeyEventResult.handled;
+            if (widget.onSelect != null) {
+              widget.onSelect!();
+              return KeyEventResult.handled;
+            }
           }
         }
         return KeyEventResult.ignored;
@@ -96,7 +120,7 @@ class _TvFocusDetectorState extends State<TvFocusDetector> {
 // TvKeyboardShortcuts — global media / back key interceptor
 // ─────────────────────────────────────────────────────────────────────────────
 
-class TvKeyboardShortcuts extends StatelessWidget {
+class TvKeyboardShortcuts extends StatefulWidget {
   final Widget child;
   final VoidCallback? onBack;
   final VoidCallback? onPlayPause;
@@ -113,9 +137,28 @@ class TvKeyboardShortcuts extends StatelessWidget {
   });
 
   @override
+  State<TvKeyboardShortcuts> createState() => _TvKeyboardShortcutsState();
+}
+
+class _TvKeyboardShortcutsState extends State<TvKeyboardShortcuts> {
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode(skipTraversal: true, debugLabel: 'TvKeyboardShortcuts');
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return KeyboardListener(
-      focusNode: FocusNode(skipTraversal: true),
+      focusNode: _focusNode,
       onKeyEvent: (event) {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
@@ -123,26 +166,27 @@ class TvKeyboardShortcuts extends StatelessWidget {
           if (key == LogicalKeyboardKey.mediaPlayPause ||
               key == LogicalKeyboardKey.mediaPlay ||
               key == LogicalKeyboardKey.mediaPause) {
-            onPlayPause?.call();
+            widget.onPlayPause?.call();
             return;
           }
           if (key == LogicalKeyboardKey.mediaRewind) {
-            onSeekLeft?.call();
+            widget.onSeekLeft?.call();
             return;
           }
           if (key == LogicalKeyboardKey.mediaFastForward) {
-            onSeekRight?.call();
+            widget.onSeekRight?.call();
             return;
           }
           if (key == LogicalKeyboardKey.escape ||
               key == LogicalKeyboardKey.backspace ||
               key == LogicalKeyboardKey.goBack) {
-            onBack?.call();
+            widget.onBack?.call();
             return;
           }
         }
       },
-      child: child,
+      child: widget.child,
     );
   }
 }
+

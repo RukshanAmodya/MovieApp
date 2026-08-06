@@ -263,8 +263,11 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                             child: Row(
                               children: [
                                 // Back Button
-                                Focus(
+                                TvFocusDetector(
                                   focusNode: _backButtonFocus,
+                                  autoScroll: false,
+                                  onSelect: () =>
+                                      Navigator.of(context).pop(),
                                   onKeyEvent: (node, event) {
                                     if (event is KeyDownEvent) {
                                       final key = event.logicalKey;
@@ -284,45 +287,39 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                     }
                                     return KeyEventResult.ignored;
                                   },
-                                  child: TvFocusDetector(
-                                    focusNode: _backButtonFocus,
-                                    autoScroll: false,
-                                    onSelect: () =>
-                                        Navigator.of(context).pop(),
-                                    builder: (context, isFocused) {
-                                      return InkWell(
-                                        onTap: () =>
-                                            Navigator.of(context).pop(),
-                                        borderRadius:
-                                            BorderRadius.circular(30),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: isFocused
-                                                ? RooflixTheme.primary
-                                                : Colors.white
-                                                    .withValues(alpha: 0.18),
-                                            shape: BoxShape.circle,
-                                            boxShadow: isFocused
-                                                ? [
-                                                    BoxShadow(
-                                                      color: RooflixTheme
-                                                          .primary
-                                                          .withValues(
-                                                              alpha: 0.5),
-                                                      blurRadius: 16,
-                                                    ),
-                                                  ]
-                                                : null,
-                                          ),
-                                          child: const Icon(
-                                              Icons.arrow_back_rounded,
-                                              color: Colors.white,
-                                              size: 24),
+                                  builder: (context, isFocused) {
+                                    return InkWell(
+                                      onTap: () =>
+                                          Navigator.of(context).pop(),
+                                      borderRadius:
+                                          BorderRadius.circular(30),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: isFocused
+                                              ? RooflixTheme.primary
+                                              : Colors.white
+                                                  .withValues(alpha: 0.18),
+                                          shape: BoxShape.circle,
+                                          boxShadow: isFocused
+                                              ? [
+                                                  BoxShadow(
+                                                    color: RooflixTheme
+                                                        .primary
+                                                        .withValues(
+                                                            alpha: 0.5),
+                                                    blurRadius: 16,
+                                                  ),
+                                                ]
+                                              : null,
                                         ),
-                                      );
-                                    },
-                                  ),
+                                        child: const Icon(
+                                            Icons.arrow_back_rounded,
+                                            color: Colors.white,
+                                            size: 24),
+                                      ),
+                                    );
+                                  },
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
@@ -388,8 +385,10 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                   const SizedBox(width: 12),
 
                                   // Play / Pause
-                                  Focus(
+                                  TvFocusDetector(
                                     focusNode: _playPauseFocus,
+                                    autoScroll: false,
+                                    onSelect: _togglePlayPause,
                                     onKeyEvent: (node, event) {
                                       if (event is KeyDownEvent) {
                                         final key = event.logicalKey;
@@ -426,44 +425,39 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                       }
                                       return KeyEventResult.ignored;
                                     },
-                                    child: TvFocusDetector(
-                                      focusNode: _playPauseFocus,
-                                      autoScroll: false,
-                                      onSelect: _togglePlayPause,
-                                      builder: (context, isFocused) {
-                                        return GestureDetector(
-                                          onTap: _togglePlayPause,
-                                          child: Container(
-                                            width: 54,
-                                            height: 54,
-                                            decoration: BoxDecoration(
-                                              color: RooflixTheme.primary,
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: RooflixTheme.primary
-                                                      .withValues(alpha: 0.5),
-                                                  blurRadius: 20,
-                                                  spreadRadius: 2,
-                                                ),
-                                              ],
-                                              border: isFocused
-                                                  ? Border.all(
-                                                      color: Colors.white,
-                                                      width: 2.5)
-                                                  : null,
-                                            ),
-                                            child: Icon(
-                                              _controller.value.isPlaying
-                                                  ? Icons.pause_rounded
-                                                  : Icons.play_arrow_rounded,
-                                              color: Colors.white,
-                                              size: 32,
-                                            ),
+                                    builder: (context, isFocused) {
+                                      return GestureDetector(
+                                        onTap: _togglePlayPause,
+                                        child: Container(
+                                          width: 54,
+                                          height: 54,
+                                          decoration: BoxDecoration(
+                                            color: RooflixTheme.primary,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: RooflixTheme.primary
+                                                    .withValues(alpha: 0.5),
+                                                blurRadius: 20,
+                                                spreadRadius: 2,
+                                              ),
+                                            ],
+                                            border: isFocused
+                                                ? Border.all(
+                                                    color: Colors.white,
+                                                    width: 2.5)
+                                                : null,
                                           ),
-                                        );
-                                      },
-                                    ),
+                                          child: Icon(
+                                            _controller.value.isPlaying
+                                                ? Icons.pause_rounded
+                                                : Icons.play_arrow_rounded,
+                                            color: Colors.white,
+                                            size: 32,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                   const SizedBox(width: 12),
 
@@ -512,8 +506,10 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                     CrossAxisAlignment.stretch,
                                 children: [
                                   // ── Progress Bar ──────────────────
-                                  Focus(
+                                  TvFocusDetector(
                                     focusNode: _progressBarFocus,
+                                    autoScroll: false,
+                                    onSelect: _togglePlayPause,
                                     onKeyEvent: (node, event) {
                                       if (event is KeyDownEvent) {
                                         final key = event.logicalKey;
@@ -549,91 +545,86 @@ class _MoviePlayerScreenState extends State<MoviePlayerScreen> {
                                       }
                                       return KeyEventResult.ignored;
                                     },
-                                    child: TvFocusDetector(
-                                      focusNode: _progressBarFocus,
-                                      autoScroll: false,
-                                      onSelect: _togglePlayPause,
-                                      builder: (context, isFocused) {
-                                        return AnimatedContainer(
-                                          duration: const Duration(
-                                              milliseconds: 180),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 8),
-                                          decoration: BoxDecoration(
+                                    builder: (context, isFocused) {
+                                      return AnimatedContainer(
+                                        duration: const Duration(
+                                            milliseconds: 180),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: isFocused
+                                              ? RooflixTheme.primary
+                                                  .withValues(alpha: 0.15)
+                                              : Colors.transparent,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
                                             color: isFocused
                                                 ? RooflixTheme.primary
-                                                    .withValues(alpha: 0.15)
                                                 : Colors.transparent,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            border: Border.all(
-                                              color: isFocused
-                                                  ? RooflixTheme.primary
-                                                  : Colors.transparent,
-                                              width: isFocused ? 2.0 : 0.0,
-                                            ),
-                                            boxShadow: isFocused
-                                                ? [
-                                                    BoxShadow(
-                                                      color: RooflixTheme
-                                                          .primary
-                                                          .withValues(
-                                                              alpha: 0.5),
-                                                      blurRadius: 16,
-                                                    ),
-                                                  ]
-                                                : [],
+                                            width: isFocused ? 2.0 : 0.0,
                                           ),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              ValueListenableBuilder(
-                                                valueListenable: _controller,
-                                                builder: (context,
-                                                    VideoPlayerValue value,
-                                                    child) {
-                                                  return VideoProgressIndicator(
-                                                    _controller,
-                                                    allowScrubbing: true,
-                                                    padding:
-                                                        const EdgeInsets
-                                                            .symmetric(
-                                                            vertical: 4),
-                                                    colors:
-                                                        VideoProgressColors(
-                                                      playedColor:
-                                                          RooflixTheme.primary,
-                                                      bufferedColor:
-                                                          Colors.white30,
-                                                      backgroundColor:
-                                                          isFocused
-                                                              ? Colors.white24
-                                                              : Colors.white12,
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                              if (isFocused)
-                                                Padding(
+                                          boxShadow: isFocused
+                                              ? [
+                                                  BoxShadow(
+                                                    color: RooflixTheme
+                                                        .primary
+                                                        .withValues(
+                                                            alpha: 0.5),
+                                                    blurRadius: 16,
+                                                  ),
+                                                ]
+                                              : [],
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            ValueListenableBuilder(
+                                              valueListenable: _controller,
+                                              builder: (context,
+                                                  VideoPlayerValue value,
+                                                  child) {
+                                                return VideoProgressIndicator(
+                                                  _controller,
+                                                  allowScrubbing: true,
                                                   padding:
-                                                      const EdgeInsets.only(
-                                                          top: 4),
-                                                  child: Text(
-                                                    '◄ Left/Right D-Pad to Seek 10s ►',
-                                                    style: GoogleFonts
-                                                        .plusJakartaSans(
-                                                      color: Colors.white,
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                    ),
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                          vertical: 4),
+                                                  colors:
+                                                      VideoProgressColors(
+                                                    playedColor:
+                                                        RooflixTheme.primary,
+                                                    bufferedColor:
+                                                        Colors.white30,
+                                                    backgroundColor:
+                                                        isFocused
+                                                            ? Colors.white24
+                                                            : Colors.white12,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            if (isFocused)
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.only(
+                                                        top: 4),
+                                                child: Text(
+                                                  '◄ Left/Right D-Pad to Seek 10s ►',
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight:
+                                                        FontWeight.w800,
                                                   ),
                                                 ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    },
                                   ),
                                   const SizedBox(height: 8),
 
@@ -755,8 +746,10 @@ class _PlayerIconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
+    return TvFocusDetector(
       focusNode: focusNode,
+      autoScroll: false,
+      onSelect: onPressed,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
@@ -785,21 +778,16 @@ class _PlayerIconBtn extends StatelessWidget {
         }
         return KeyEventResult.ignored;
       },
-      child: TvFocusDetector(
-        focusNode: focusNode,
-        autoScroll: false,
-        onSelect: onPressed,
-        builder: (context, isFocused) {
-          return IconButton(
-            iconSize: 28,
-            icon: Icon(
-              icon,
-              color: isFocused ? RooflixTheme.primary : Colors.white,
-            ),
-            onPressed: onPressed,
-          );
-        },
-      ),
+      builder: (context, isFocused) {
+        return IconButton(
+          iconSize: 28,
+          icon: Icon(
+            icon,
+            color: isFocused ? RooflixTheme.primary : Colors.white,
+          ),
+          onPressed: onPressed,
+        );
+      },
     );
   }
 }
@@ -829,8 +817,10 @@ class _ControlPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
+    return TvFocusDetector(
       focusNode: focusNode,
+      autoScroll: false,
+      onSelect: onPressed,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           final key = event.logicalKey;
@@ -855,54 +845,49 @@ class _ControlPill extends StatelessWidget {
         }
         return KeyEventResult.ignored;
       },
-      child: TvFocusDetector(
-        focusNode: focusNode,
-        autoScroll: false,
-        onSelect: onPressed,
-        builder: (context, isFocused) {
-          return InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
+      builder: (context, isFocused) {
+        return InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isFocused
+                  ? RooflixTheme.primary
+                  : Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
                 color: isFocused
-                    ? RooflixTheme.primary
-                    : Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isFocused
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.2),
-                ),
-                boxShadow: isFocused
-                    ? [
-                        BoxShadow(
-                          color: RooflixTheme.primary.withValues(alpha: 0.5),
-                          blurRadius: 12,
-                        )
-                      ]
-                    : [],
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.2),
               ),
-              child: Row(
-                children: [
-                  Icon(icon, color: Colors.white, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+              boxShadow: isFocused
+                  ? [
+                      BoxShadow(
+                        color: RooflixTheme.primary.withValues(alpha: 0.5),
+                        blurRadius: 12,
+                      )
+                    ]
+                  : [],
             ),
-          );
-        },
-      ),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

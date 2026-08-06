@@ -56,56 +56,54 @@ class FavoritesScreen extends StatelessWidget {
             TvFocusDetector(
               autofocus: true,
               onSelect: () => onNavigate?.call(AppPage.profile),
+              onKeyEvent: (node, event) {
+                if (event is KeyDownEvent) {
+                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                    FocusScope.of(context)
+                        .focusInDirection(TraversalDirection.left);
+                    return KeyEventResult.handled;
+                  }
+                }
+                return KeyEventResult.ignored;
+              },
               builder: (context, isFocused) {
-                return Focus(
-                  onKeyEvent: (node, event) {
-                    if (event is KeyDownEvent) {
-                      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                        FocusScope.of(context)
-                            .focusInDirection(TraversalDirection.left);
-                        return KeyEventResult.handled;
-                      }
-                    }
-                    return KeyEventResult.ignored;
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    decoration: BoxDecoration(
-                      color: RooflixTheme.primary,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isFocused ? Colors.white : Colors.transparent,
-                        width: isFocused ? 2.5 : 0.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: RooflixTheme.primary
-                              .withValues(alpha: isFocused ? 0.6 : 0.3),
-                          blurRadius: isFocused ? 24 : 12,
-                          spreadRadius: isFocused ? 2 : 0,
-                        ),
-                      ],
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  decoration: BoxDecoration(
+                    color: RooflixTheme.primary,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isFocused ? Colors.white : Colors.transparent,
+                      width: isFocused ? 2.5 : 0.0,
                     ),
-                    child: ElevatedButton.icon(
-                      onPressed: () => onNavigate?.call(AppPage.profile),
-                      icon: const Icon(Icons.login_rounded, size: 20),
-                      label: Text(
-                        'Sign In Now',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: RooflixTheme.primary
+                            .withValues(alpha: isFocused ? 0.6 : 0.3),
+                        blurRadius: isFocused ? 24 : 12,
+                        spreadRadius: isFocused ? 2 : 0,
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () => onNavigate?.call(AppPage.profile),
+                    icon: const Icon(Icons.login_rounded, size: 20),
+                    label: Text(
+                      'Sign In Now',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                   ),
